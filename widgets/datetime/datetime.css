@@ -1,0 +1,29 @@
+#widget-datetime {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 calc(56 * var(--wu));
+  gap: calc(4 * var(--wu));
+}
+
+.dt-time {
+  font-size: calc(125 * var(--wu));
+  font-weight: 700;
+  letter-spacing: calc(-4 * var(--wu));
+  line-height: 1;
+}
+
+.dt-date {
+  font-size: calc(41 * var(--wu));
+  font-weight: 300;
+  color: #bbb;
+  letter-spacing: calc(0.5 * var(--wu));
+}
+
+.dt-secs {
+  font-size: 0.6em;
+  font-weight: 300;
+  opacity: 0.5;
+  letter-spacing: 0;
+  vertical-align: 0em
+}

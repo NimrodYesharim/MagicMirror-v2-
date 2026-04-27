@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>MagicMirror Control</title>
+  <style>
+  /* ─── iOS Design Tokens ──────────────────────────────────────────────────── */
+  :root {
+    --blue:   #0A84FF; --green:  #30D158; --orange: #FF9F0A;
+    --red:    #FF453A; --yellow: #FFD60A; --purple: #BF5AF2;
+    --teal:   #40CBE0; --indigo: #5E5CE6;
+    --gray:   #8E8E93; --gray2:  #636366; --gray3:  #48484A;
+    --gray4:  #3A3A3C; --gray5:  #2C2C2E; --gray6:  #1C1C1E;
+    --bg:     #000000; --bg2:    #1C1C1E; --bg3:    #2C2C2E;
+    --label:  #FFFFFF;
+    --label2: rgba(235,235,245,0.6);
+    --label3: rgba(235,235,245,0.3);
+    --label4: rgba(235,235,245,0.18);
+    --fill:   rgba(120,120,128,0.36);
+    --fill2:  rgba(120,120,128,0.24);
+    --fill3:  rgba(118,118,128,0.18);
+    --sep:    rgba(84,84,88,0.65);
+    --sep2:   rgba(84,84,88,0.35);
+    --st: env(safe-area-inset-top,    44px);
+    --sb: env(safe-area-inset-bottom, 0px);
+    --sl: env(safe-area-inset-left,   0px);
+    --sr: env(safe-area-inset-right,  0px);
+    --gold: #c9a84c;
+    --gold-dim: rgba(201,168,76,0.10);
+  }
+
+  /* ─── Reset ──────────────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; height: 100dvh; background: var(--bg); color: var(--label); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  button { background: none; border: none; cursor: pointer; font: inherit; color: inherit; }
+  input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--blue); text-decoration: none; }
+
+  /* ─── App Shell ──────────────────────────────────────────────────────────── */
+  #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+
+  /* ─── Navbar ─────────────────────────────────────────────────────────────── */
+  #navbar {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 16px 10px;
+    padding-top: calc(var(--st) + 0px);
+    min-height: calc(var(--st) + 52px);
+    background: rgba(28,28,30,0.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 0.5px solid var(--sep2);
+  }
+  #navbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 0.5px;
+    background: linear-gradient(90deg, transparent 0%, var(--sep) 20%, var(--sep) 80%, transparent 100%);
+  }
+  #nav-left, #nav-right { width: 80px; flex-shrink: 0; display: flex; align-items: center; }
+  #nav-right { justify-content: flex-end; }
+  #nav-title-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  #nav-app-title {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 5px;
+    color: var(--gold);
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  #nav-page-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    color: var(--label);
+  }
+  #nav-back {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    color: var(--blue);
+    font-size: 17px;
+    font-weight: 400;
+    padding: 4px 0;
+  }
+  #nav-back svg { width: 11px; height: 18px; }
+  #nav-save-btn {
+    display: none;
+    color: var(--blue);
+    font-size: 17px;
+    font-weight: 600;
+    padding: 4px 0;
+  }
+  #nav-mirror-link { display: none; color: var(--blue); font-size: 17px; }
+  #nav-status { display: flex; align-items: center; gap: 6px; }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); flex-shrink: 0;
+    transition: background 0.5s, box-shadow 0.5s;
+  }
+  #status-dot.green { background: var(--green); box-shadow: 0 0 8px rgba(48,209,88,0.5); }
+  #status-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px rgba(255,214,10,0.4); }
+  #status-dot.orange { background: var(--orange); box-shadow: 0 0 8px rgba(255,159,10,0.4); }
+  #status-dot.red { background: var(--red); }
+  #status-label { font-size: 11px; color: var(--label3); letter-spacing: 0.2px; }
+
+  /* navbar in "detail" mode */
+  #app.detail-mode #nav-back     { display: flex; }
+  #app.detail-mode #nav-app-title { display: none; }
+  #app.detail-mode #nav-page-title { display: block; }
+  #app.detail-mode #nav-status   { display: none; }
+  #app.detail-mode #nav-mirror-link { display: none; }
+  #app.detail-mode #nav-save-btn { display: block; }
+  #app:not(.detail-mode) #nav-mirror-link { display: block; }
+
+  /* ─── Content ────────────────────────────────────────────────────────────── */
+  #content { flex: 1; overflow: hidden; position: relative; }
+
+  .page {
+    display: none;
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding: 20px 0 calc(var(--sb) + 20px);
+    transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity   0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .page.active { display: block; }
+  .page.slide-out { transform: translateX(-30%); opacity: 0.6; pointer-events: none; }
+
+  /* ─── Settings Detail Panel ──────────────────────────────────────────────── */
+  #settings-panel {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    z-index: 20;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 20px 0 calc(var(--sb) + 20px);
+  }
+  #settings-panel.active { transform: translateX(0); }
+
+  /* ─── Section Headers ────────────────────────────────────────────────────── */
+  .sec-header {
+    padding: 0 20px 6px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--label3);
+    letter-spacing: 0.1px;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    margin-top: 28px;
+  }
+  .sec-header:first-child { margin-top: 0; }
+  .sec-footer {
+    padding: 8px 20px 0;
+    font-size: 13px;
+    color: var(--label3);
+    line-height: 1.5;
+  }
+
+  /* ─── iOS Cards (inset grouped) ──────────────────────────────────────────── */
+  .card {
+    margin: 0 16px;
+    background: var(--bg2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* ─── List rows ──────────────────────────────────────────────────────────── */
+  .row {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    gap: 12px;
+    border-bottom: 0.5px solid var(--sep2);
+    position: relative;
+  }
+  .row:last-child { border-bottom: none; }
+  .row.tap { cursor: pointer; }
+  .row.tap:active { background: var(--fill3); }
+  .row.destructive .row-label { color: var(--red); }
+  .row-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .row-icon svg { width: 16px; height: 16px; color: #fff; }
+  .row-body { flex: 1; min-width: 0; }
+  .row-label { font-size: 17px; letter-spacing: -0.2px; color: var(--label); }
+  .row-sublabel { font-size: 13px; color: var(--label3); margin-top: 2px; }
+  .row-value { font-size: 17px; color: var(--label3); flex-shrink: 0; max-width: 44%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-chev { width: 8px; height: 14px; opacity: 0.45; flex-shrink: 0; }
+  .row-chev svg { width: 8px; height: 14px; }
+
+  /* ─── Service status dots ────────────────────────────────────────────────── */
+  .svc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .svc-dot.ok  { background: var(--green); box-shadow: 0 0 6px rgba(48,209,88,0.5); }
+  .svc-dot.err { background: var(--gray3); }
+
+  /* ─── iOS Toggle Switch ──────────────────────────────────────────────────── */
+  .ios-toggle { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+  .ios-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .ios-toggle-track {
+    position: absolute; inset: 0;
+    background: var(--gray3);
+    border-radius: 16px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .ios-toggle input:checked + .ios-toggle-track { background: var(--green); }
+  .ios-toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 27px; height: 27px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .ios-toggle input:checked + .ios-toggle-track::after { transform: translateX(20px); }
+
+  /* ─── Text input (inset in row) ──────────────────────────────────────────── */
+  .row-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 17px;
+    color: var(--label);
+    text-align: right;
+    min-width: 0;
+    -webkit-appearance: none;
+  }
+  .row-input::placeholder { color: var(--label4); }
+  select.row-input { cursor: pointer; }
+  select.row-input option { background: var(--bg3); }
+
+  /* ─── Layout Templates Scroll ────────────────────────────────────────────── */
+  #layout-template-scroll {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 16px;
+  }
+  #layout-template-scroll::-webkit-scrollbar { display: none; }
+  .tpl-pill {
+    flex-shrink: 0;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--bg2);
+    color: var(--label3);
+    border: 0.5px solid var(--sep);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .tpl-pill.active {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+  }
+  .tpl-pill.add-pill {
+    color: var(--blue);
+    background: transparent;
+    border-color: var(--blue);
+  }
+
+  /* ─── Layout Workspace ───────────────────────────────────────────────────── */
+  #layout-workspace {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px;
+    align-items: flex-start;
+  }
+  #layout-preview-wrap {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #layout-preview {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: repeat(24, 1fr);
+    width: 156px;
+    height: 312px;
+    background: #0a0a0a;
+    border-radius: 6px;
+    border: 1px solid var(--sep);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Grid lines */
+  #layout-preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: calc(100% / 12) calc(100% / 24);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .preview-widget {
+    position: absolute;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s, filter 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: rgba(255,255,255,0.85);
+    text-transform: uppercase;
+    overflow: hidden;
+    z-index: 1;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .preview-widget.hidden { opacity: 0.18; filter: grayscale(80%); }
+  .preview-widget.selected { outline: 2px solid #fff; outline-offset: -1px; z-index: 2; }
+  .preview-widget[data-w="datetime"] { background: rgba(10,132,255,0.55); }
+  .preview-widget[data-w="weather"]  { background: rgba(255,159,10,0.55); }
+  .preview-widget[data-w="calendar"] { background: rgba(191,90,242,0.55); }
+  .preview-widget[data-w="hue"]      { background: rgba(255,214,10,0.50); }
+  .preview-widget[data-w="news"]     { background: rgba(48,209,88,0.50); }
+  .preview-widget[data-w="redalert"] { background: rgba(255,69,58,0.55); }
+
+  /* ─── Widget sidebar list ────────────────────────────────────────────────── */
+  #layout-widget-list { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .widget-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg2);
+    border-radius: 10px;
+    padding: 9px 12px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .widget-row.selected { border-color: var(--blue); background: rgba(10,132,255,0.08); }
+  .widget-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .widget-row-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .widget-row .ios-toggle { transform: scale(0.72); transform-origin: right center; }
+
+  /* ─── Widget edit panel (below workspace) ────────────────────────────────── */
+  #widget-edit-panel {
+    margin: 16px 16px 0;
+    background: var(--bg2);
+    border-radius: 12px;
+    padding: 16px;
+    display: none;
+  }
+  #widget-edit-panel.visible { display: block; }
+  .edit-panel-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--label);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .slider-group { margin-bottom: 14px; }
+  .slider-group:last-of-type { margin-bottom: 0; }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--label2);
+    margin-bottom: 6px;
+  }
+  .slider-label span:last-child { color: var(--blue); font-weight: 500; font-size: 14px; }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--gray3);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    cursor: pointer;
+  }
+
+  /* ─── Layout actions ─────────────────────────────────────────────────────── */
+  #layout-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px 16px 0;
+  }
+  .layout-action-btn {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: opacity 0.15s;
+  }
+  .layout-action-btn:active { opacity: 0.7; }
+  .layout-action-btn.primary { background: var(--blue); color: #fff; }
+  .layout-action-btn.secondary { background: var(--bg2); color: var(--blue); }
+
+  /* ─── Layout template options row ───────────────────────────────────────── */
+  #layout-tpl-opts {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px 0;
+  }
+  .tpl-opt-btn {
+    flex: 1;
+    padding: 9px 8px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    background: var(--bg2);
+    color: var(--label2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tpl-opt-btn:active { opacity: 0.7; }
+  .tpl-opt-btn.danger { color: var(--red); }
+  .tpl-opt-btn.accent { color: var(--blue); }
+
+  /* ─── Logs page ──────────────────────────────────────────────────────────── */
+  #log-search-wrap { padding: 0 16px 12px; }
+  #log-filter {
+    width: 100%;
+    background: var(--fill2);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px 8px 36px;
+    font-size: 15px;
+    color: var(--label);
+    outline: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+  }
+  #log-filter::placeholder { color: var(--label3); }
+  #log-output {
+    background: #050805;
+    border-radius: 12px;
+    margin: 0 16px;
+    padding: 12px;
+    min-height: 200px;
+    max-height: calc(100dvh - 260px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 0.5px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+  #log-output::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(255,255,255,0.005) 3px, rgba(255,255,255,0.005) 4px);
+    pointer-events: none;
+    border-radius: 12px;
+  }
+  .log-line {
+    display: block;
+    position: relative;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1.8;
+    color: #3a7a3a;
+    letter-spacing: 0.1px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .log-time { color: #1e3d1e; margin-right: 6px; }
+  .log-error { color: #7a2424; }
+  .log-warn  { color: #6b4a10; }
+
+  /* ─── Setup page ─────────────────────────────────────────────────────────── */
+  .step-list { list-style: none; }
+  .step-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 0.5px solid var(--sep2);
+    font-size: 15px;
+    color: var(--label2);
+    line-height: 1.5;
+  }
+  .step-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .cert-url-box {
+    padding: 14px 16px;
+    background: rgba(10,132,255,0.08);
+    border-radius: 10px;
+    margin: 0 16px;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--blue);
+    word-break: break-all;
+    line-height: 1.6;
+  }
+
+  /* ─── Action cells (full-width tap) ──────────────────────────────────────── */
+  .action-row { text-align: center; }
+  .action-row .row-label { color: var(--blue); font-size: 17px; }
+  .action-row.destructive .row-label { color: var(--red); }
+
+  /* ─── Calendar list in settings ──────────────────────────────────────────── */
+  .cal-color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ─── Settings list items ────────────────────────────────────────────────── */
+  .settings-row-icon-wrap {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .settings-row-icon-wrap svg { width: 17px; height: 17px; color: #fff; }
+
+  /* ─── Toast ──────────────────────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: calc(var(--sb) + 90px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(50,50,52,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--label);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 20px;
+    border-radius: 20px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ─── Action Sheet ───────────────────────────────────────────────────────── */
+  #action-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  #action-sheet-overlay.show { opacity: 1; pointer-events: auto; }
+  #action-sheet {
+    width: 100%;
+    padding: 0 8px calc(var(--sb) + 8px);
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  #action-sheet-overlay.show #action-sheet { transform: translateY(0); }
+  .as-group {
+    background: rgba(44,44,46,0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .as-title-row {
+    padding: 14px 16px 10px;
+    text-align: center;
+  }
+  .as-title { font-size: 13px; font-weight: 600; color: var(--label); }
+  .as-msg { font-size: 13px; color: var(--label3); margin-top: 2px; }
+  .as-btn {
+    display: block;
+    width: 100%;
+    padding: 17px 16px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--blue);
+    border-top: 0.5px solid var(--sep);
+    cursor: pointer;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    transition: background 0.12s;
+  }
+  .as-btn:active { background: rgba(255,255,255,0.06); }
+  .as-btn.destructive { color: var(--red); }
+  .as-btn.cancel { font-weight: 600; }
+  .as-cancel { background: rgba(44,44,46,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 14px; overflow: hidden; }
+
+  /* ─── Tab Bar ────────────────────────────────────────────────────────────── */
+  #tabbar {
+    flex-shrink: 0;
+    display: flex;
+    background: rgba(28,28,30,0.94);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 0.5px solid var(--sep2);
+    padding-bottom: var(--sb);
+  }
+  .tab-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 9px 4px 7px;
+    min-height: 49px;
+    color: var(--gray);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: color 0.18s;
+    position: relative;
+  }
+  .tab-btn svg { width: 25px; height: 25px; transition: color 0.18s; }
+  .tab-btn.active { color: var(--blue); }
+  .tab-btn .tab-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 16px);
+    background: var(--red);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    display: none;
+  }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ─── Navbar ────────────────────────────────────────────────────────────── -->
+  <nav id="navbar">
+    <div id="nav-left">
+      <button id="nav-back" aria-label="Back">
+        <svg viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 1L1 9l8 8"/>
+        </svg>
+        <span id="nav-back-label">Settings</span>
+      </button>
+    </div>
+    <div id="nav-title-wrap">
+      <span id="nav-app-title">MagicMirror</span>
+      <span id="nav-page-title"></span>
+    </div>
+    <div id="nav-right">
+      <a id="nav-mirror-link" href="#" aria-label="Open mirror">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8M12 17v4"/>
+        </svg>
+      </a>
+      <div id="nav-status">
+        <div id="status-dot" role="status"></div>
+        <span id="status-label">—</span>
+      </div>
+      <button id="nav-save-btn" aria-label="Save">Save</button>
+    </div>
+  </nav>
+
+  <!-- ─── Main content ──────────────────────────────────────────────────────── -->
+  <main id="content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="p-dashboard">
+      <div class="sec-header" style="margin-top:4px">Services</div>
+      <div class="card" id="services-list">
+        <div class="row"><div class="row-body"><div class="row-label" style="color:var(--label3)">Connecting…</div></div></div>
+      </div>
+
+      <div class="sec-header">Layout</div>
+      <div class="card"><div id="layout-quick" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px"></div></div>
+
+      <div class="sec-header">Actions</div>
+      <div class="card">
+        <div class="row tap action-row" id="btn-refresh">
+          <div class="row-icon" style="background:#0A84FF20"><svg viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
+          <div class="row-body"><div class="row-label">Refresh Data</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap action-row" id="btn-hard-reload">
+          <div class="row-icon" style="background:#BF5AF220"><svg viewBox="0 0 24 24" fill="none" stroke="#BF5AF2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></div>
+          <div class="row-body"><div class="row-label">Hard Reload Mirror</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap action-row" id="btn-reboot">
+          <div class="row-icon" style="background:#FF9F0A20"><svg viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/></svg></div>
+          <div class="row-body"><div class="row-label">Restart Server</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap action-row destructive" id="btn-shutdown">
+          <div class="row-icon" style="background:#FF453A20"><svg viewBox="0 0 24 24" fill="none" stroke="#FF453A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"/></svg></div>
+          <div class="row-body"><div class="row-label">Shut Down Pi</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layout Editor -->
+    <div class="page" id="p-layout">
+      <div class="sec-header" style="margin-top:4px">Template</div>
+      <div id="layout-template-scroll"></div>
+
+      <div id="layout-workspace">
+        <div id="layout-preview-wrap">
+          <div id="layout-preview"></div>
+          <div style="font-size:10px;color:var(--label4);text-align:center;margin-top:4px">Tap widget to edit</div>
+        </div>
+        <div id="layout-widget-list"></div>
+      </div>
+
+      <div id="widget-edit-panel">
+        <div class="edit-panel-title">
+          <span id="ep-color-dot" style="width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+          <span id="ep-title">Widget</span>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label"><span>Row start</span><span id="ep-rs-val">1</span></div>
+          <input type="range" id="ep-row-start" min="1" max="24" value="1">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label"><span>Row end</span><span id="ep-re-val">4</span></div>
+          <input type="range" id="ep-row-end" min="2" max="25" value="4">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label"><span>Col start</span><span id="ep-cs-val">1</span></div>
+          <input type="range" id="ep-col-start" min="1" max="12" value="1">
+        </div>
+        <div class="slider-group" style="margin-bottom:0">
+          <div class="slider-label"><span>Col end</span><span id="ep-ce-val">13</span></div>
+          <input type="range" id="ep-col-end" min="2" max="13" value="13">
+        </div>
+      </div>
+
+      <div id="layout-tpl-opts">
+        <button class="tpl-opt-btn accent" id="btn-tpl-rename">Rename</button>
+        <button class="tpl-opt-btn accent" id="btn-tpl-default">Make Default</button>
+        <button class="tpl-opt-btn danger" id="btn-tpl-delete">Delete</button>
+      </div>
+
+      <div id="layout-actions">
+        <button class="layout-action-btn secondary" id="btn-layout-discard">Discard</button>
+        <button class="layout-action-btn primary" id="btn-layout-save">Save Layout</button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="page" id="p-settings">
+      <div class="sec-header" style="margin-top:4px">Widgets</div>
+      <div class="card">
+        <div class="row tap" data-section="weather">
+          <div class="settings-row-icon-wrap" style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg></div>
+          <div class="row-body"><div class="row-label">Weather</div></div>
+          <div class="row-value" id="sval-weather"></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap" data-section="calendar">
+          <div class="settings-row-icon-wrap" style="background:#FF453A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="row-body"><div class="row-label">Calendar</div></div>
+          <div class="row-value" id="sval-calendar"></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap" data-section="news">
+          <div class="settings-row-icon-wrap" style="background:#FF9F0A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg></div>
+          <div class="row-body"><div class="row-label">News</div></div>
+          <div class="row-value" id="sval-news"></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap" data-section="hue">
+          <div class="settings-row-icon-wrap" style="background:#FFD60A; "><svg viewBox="0 0 24 24" fill="none" stroke="#1a1a00" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+          <div class="row-body"><div class="row-label">Hue Lights</div></div>
+          <div class="row-value" id="sval-hue"></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap" data-section="redalert">
+          <div class="settings-row-icon-wrap" style="background:#FF453A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div class="row-body"><div class="row-label">Red Alert</div></div>
+          <div class="row-value" id="sval-redalert"></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="sec-header">Display</div>
+      <div class="card">
+        <div class="row tap" data-section="display">
+          <div class="settings-row-icon-wrap" style="background:#5E5CE6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+          <div class="row-body"><div class="row-label">Display & Ports</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="sec-header">System</div>
+      <div class="card">
+        <div class="row tap" data-section="setup">
+          <div class="settings-row-icon-wrap" style="background:#30D158"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="row-body"><div class="row-label">Certificate & Trust</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+        <div class="row tap" data-section="server-info">
+          <div class="settings-row-icon-wrap" style="background:#8E8E93"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div>
+          <div class="row-body"><div class="row-label">Server Info</div></div>
+          <div class="row-chev"><svg viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="page" id="p-logs">
+      <div class="sec-header" style="margin-top:4px">System Log</div>
+      <div id="log-search-wrap">
+        <input id="log-filter" type="search" placeholder="Filter logs" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="log-output" role="log" aria-live="polite"></div>
+    </div>
+
+    <!-- Settings Detail (slides in from right) -->
+    <div id="settings-panel" role="region" aria-label="Settings detail">
+      <div id="settings-panel-body"></div>
+    </div>
+
+  </main>
+
+  <!-- ─── Action Sheet ───────────────────────────────────────────────────────── -->
+  <div id="action-sheet-overlay">
+    <div id="action-sheet">
+      <div class="as-group" id="as-main-group"></div>
+      <div class="as-cancel as-group">
+        <button class="as-btn cancel" id="as-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast ─────────────────────────────────────────────────────────────── -->
+  <div id="toast"></div>
+
+  <!-- ─── Tab Bar ───────────────────────────────────────────────────────────── -->
+  <nav id="tabbar" role="tablist">
+    <button class="tab-btn active" data-page="dashboard" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+        <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+        <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+        <rect x="3" y="16" width="7" height="5" rx="1.5"/>
+      </svg>
+      Dashboard
+    </button>
+    <button class="tab-btn" data-page="layout" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <line x1="3" y1="9" x2="21" y2="9"/>
+        <line x1="3" y1="15" x2="21" y2="15"/>
+        <line x1="9" y1="9" x2="9" y2="21"/>
+      </svg>
+      Layout
+    </button>
+    <button class="tab-btn" data-page="settings" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      Settings
+    </button>
+    <button class="tab-btn" data-page="logs" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 17 10 11 4 5"/>
+        <line x1="12" y1="19" x2="20" y2="19"/>
+      </svg>
+      Logs
+    </button>
+  </nav>
+
+</div>
+
+<script src="/js/ws.js"></script>
+<script src="/js/control.js"></script>
+</body>
+</html>

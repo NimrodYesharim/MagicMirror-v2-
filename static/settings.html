@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MagicMirror — Settings</title>
+  <link rel="stylesheet" href="/css/settings.css">
+</head>
+<body>
+  <div id="app">
+    <header id="settings-header">
+      <a href="/" class="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Mirror
+      </a>
+      <h1>Settings</h1>
+    </header>
+
+    <div id="settings-layout">
+      <nav id="settings-nav">
+        <button class="nav-btn active" data-section="weather">Weather</button>
+        <button class="nav-btn" data-section="calendar">Calendar</button>
+        <button class="nav-btn" data-section="news">News</button>
+        <button class="nav-btn" data-section="hue">Hue Lights</button>
+        <button class="nav-btn" data-section="redalert">Red Alert</button>
+        <button class="nav-btn" data-section="display">Display</button>
+        <button class="nav-btn" data-section="layout">Layout Editor</button>
+      </nav>
+
+      <main id="settings-content">
+        <div class="loading">Loading config…</div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/js/settings.js"></script>
+</body>
+</html>

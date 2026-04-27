@@ -1,0 +1,63 @@
+/* Alert overlay — sits above everything, pointer-events none so mirror still works */
+#alert-overlay {
+  background: rgba(255, 20, 20, 0);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+#alert-overlay.flashing {
+  animation: alert-flash 0.6s infinite alternate;
+}
+
+@keyframes alert-flash {
+  0%   { background: rgba(255, 20, 20, 0.0); }
+  100% { background: rgba(255, 20, 20, 0.45); }
+}
+
+/* Modal card */
+.alert-modal {
+  background: rgba(0, 0, 0, 0.88);
+  border: 2px solid rgba(255, 55, 55, 0.85);
+  border-radius: 28px;
+  padding: 48px 64px 40px;
+  text-align: center;
+  max-width: 75%;
+  pointer-events: none;
+  box-shadow: 0 0 60px rgba(255, 30, 30, 0.35);
+}
+
+/* "צבע אדום" headline */
+.alert-title {
+  font-family: 'Rubik', 'SFPro', sans-serif;
+  font-size: 88px;
+  font-weight: 800;
+  color: #ff3b30;
+  direction: rtl;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  text-shadow: 0 0 30px rgba(255, 59, 48, 0.6);
+}
+
+/* Location chips */
+.alert-areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.alert-area {
+  font-family: 'Rubik', 'SFPro', sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: #fff;
+  direction: rtl;
+  background: rgba(255, 55, 55, 0.18);
+  border: 1.5px solid rgba(255, 55, 55, 0.5);
+  border-radius: 12px;
+  padding: 10px 22px;
+}

@@ -1,0 +1,340 @@
+#widget-hue {
+  display: flex;
+  align-items: stretch;
+  padding: 0 calc(20 * var(--wu)) calc(20 * var(--wu)) calc(28 * var(--wu));
+  gap: calc(14 * var(--wu));
+  border-top: calc(1 * var(--wu)) solid #1a1a1a;
+  overflow: visible;
+  height: 660px;
+  min-height: 600px;
+  min-width: 300px;
+  align-self: start;
+  /* box-sizing: border-box; */
+}
+
+/* ── Scenes column ── */
+.hue-scenes {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(14 * var(--wu));
+  width: calc(70 * var(--wu));
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.hue-scenes::-webkit-scrollbar { display: none; }
+
+.scene-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(5 * var(--wu));
+}
+
+.scene-btn {
+  width: calc(48 * var(--wu));
+  height: calc(48 * var(--wu));
+  border-radius: 50%;
+  border: calc(5 * var(--wu)) solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    var(--g) border-box;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.2s;
+  flex-shrink: 0;
+}
+.scene-btn:active         { transform: scale(0.88); }
+.scene-btn:not(.active)   { opacity: 0.4; }
+.scene-btn.active         { opacity: 1; border-width: calc(4 * var(--wu)); }
+
+.scene-name {
+  font-size: calc(9 * var(--wu));
+  font-weight: 500;
+  color: #555;
+  text-align: center;
+  width: calc(64 * var(--wu));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── Rooms row ── */
+.hue-rooms {
+  flex: 1;
+  display: flex;
+  gap: calc(10 * var(--wu));
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── Room card — pill shape ── */
+.room-card {
+  flex: 1 0 calc(150 * var(--wu));
+  display: flex;
+  flex-direction: column;
+  gap: calc(10 * var(--wu));
+  padding: calc(22 * var(--wu)) calc(20 * var(--wu)) calc(18 * var(--wu));
+  border-radius: calc(55 * var(--wu));
+  background: #0c0c0c;
+  border: calc(3 * var(--wu)) solid var(--border-col, #1e1e1e);
+  min-width: 0;
+  transition: border-color 0.5s;
+  min-height: 0;
+  container-type: size;
+}
+
+/* ── Card header — icon above name ── */
+.card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(4 * var(--wu));
+  flex-shrink: 0;
+  padding-top: calc(2 * var(--wu));
+}
+
+.card-icon {
+  width: calc(34 * var(--wu));
+  height: calc(34 * var(--wu));
+  color: #3a3a3a;
+  flex-shrink: 0;
+  transition: color 0.3s;
+}
+.room-card.on .card-icon { color: #aaa; }
+.card-icon svg { width: 100%; height: 100%; stroke-width: 1.8; }
+
+.card-zone {
+  font-size: calc(13 * var(--wu));
+  font-weight: 600;
+  color: #3a3a3a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  width: 100%;
+  transition: color 0.3s;
+}
+.room-card.on .card-zone { color: #ddd; }
+
+.room-card.room-undisc {
+  opacity: 0.3;
+  pointer-events: none;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.undisc-label {
+  font-size: calc(10 * var(--wu));
+  color: #555;
+  text-align: center;
+  padding: calc(4 * var(--wu)) calc(8 * var(--wu));
+}
+
+/* ── Sliders area ── */
+.card-sliders-wrap {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-height: 0;
+  padding-block: calc(6 * var(--wu));
+}
+
+.sliders-single, .sliders-double {
+  display: flex;
+  gap: calc(12 * var(--wu));
+  align-self: stretch;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.slider-col {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* Track wrap — position: relative so slider (absolute) and badge anchor to it */
+.slider-track-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.sliders-single .slider-track-wrap {
+  width: calc(38 * var(--wu));
+  padding-block: calc(14 * var(--wu));
+}
+.sliders-double .slider-track-wrap {
+  width: calc(28 * var(--wu));
+  padding-block: calc(10 * var(--wu));
+}
+
+/* ── Native vertical slider (rotate approach — avoids Chromium/Linux writing-mode bug) ──
+   The input is rendered horizontally then rotated -90deg so left=bottom(min), right=top(max).
+   JS sets slider.style.width = wrap.clientHeight so the track fills the container height.    */
+.big-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
+  /* width set by JS (_sizeSliders); height = visual thickness */
+  height: calc(38 * var(--wu));
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+.sliders-double .big-slider {
+  height: calc(28 * var(--wu));
+}
+
+/* ── Tracks ── */
+.big-slider::-webkit-slider-runnable-track {
+  border-radius: calc(30 * var(--wu));
+  height: 100%;
+  width: 100%;
+}
+
+/* Gradients run left→right (which is bottom→top after -90deg rotation) */
+.big-slider.track-bri::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #1a1a1a 0%, #888 40%, #ffffff 100%);
+}
+.big-slider.track-hue::-webkit-slider-runnable-track {
+  background: linear-gradient(to right,
+    hsl(0,100%,55%), hsl(30,100%,55%), hsl(60,100%,55%),
+    hsl(120,100%,55%), hsl(180,100%,55%), hsl(240,100%,55%),
+    hsl(300,100%,55%), hsl(360,100%,55%));
+}
+.big-slider.track-sat::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #444, var(--sat-top, #ff0));
+}
+.big-slider.track-temp::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #ff8c00, #ffcb6b, #fff8ee, #c8e8ff, #77b6ff);
+}
+
+/* ── Thumb — white ring circle ── */
+.big-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(38 * var(--wu));
+  height: calc(38 * var(--wu));
+  border-radius: 50%;
+  box-shadow: 0 calc(2 * var(--wu)) calc(12 * var(--wu)) rgba(0,0,0,0.8);
+  cursor: pointer;
+  transition: background 0.1s, transform 0.12s;
+  border: calc(4 * var(--wu)) solid #fff;
+  background: var(--thumb-color, #666);
+  margin: 0;
+}
+.sliders-double .big-slider::-webkit-slider-thumb { width: calc(28 * var(--wu)); height: calc(28 * var(--wu)); }
+
+/* In BRI mode, hide thumb — badge acts as indicator */
+.big-slider.track-bri::-webkit-slider-thumb { opacity: 0; }
+
+.big-slider:active::-webkit-slider-thumb { transform: scale(1.12); }
+.big-slider:disabled { opacity: 0.15; pointer-events: none; }
+
+/* ── Floating percentage badge (BRI mode only) ── */
+.slider-badge {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(50 * var(--wu));
+  height: calc(50 * var(--wu));
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: calc(12 * var(--wu));
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 calc(2 * var(--wu)) calc(10 * var(--wu)) rgba(0,0,0,0.4);
+  letter-spacing: calc(-0.3 * var(--wu));
+}
+
+/* ── Mode buttons ── */
+.card-mode-btns {
+  display: flex;
+  justify-content: center;
+  gap: calc(12 * var(--wu));
+  flex-shrink: 0;
+  padding: calc(2 * var(--wu)) 0;
+}
+
+.mode-btn {
+  width: calc(26 * var(--wu));
+  height: calc(26 * var(--wu));
+  border-radius: 50%;
+  border: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.15s;
+}
+.mode-btn:not(.active) { opacity: 0.25; }
+.mode-btn.active       { opacity: 1; box-shadow: 0 0 0 calc(2.5 * var(--wu)) rgba(255,255,255,0.75), 0 0 0 calc(4 * var(--wu)) rgba(0,0,0,0.5); }
+.mode-btn:active       { transform: scale(0.88); }
+
+.bri-btn   { background: linear-gradient(to top, #333, #fff); }
+.color-btn { background: conic-gradient(from 0deg, #f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.temp-btn  { background: linear-gradient(to top, #ff8c00, #fff8ee, #77b6ff); }
+
+/* ── iOS toggle ── */
+.card-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-bottom: calc(2 * var(--wu));
+}
+
+.ios-toggle {
+  cursor: pointer;
+  display: block;
+}
+
+.ios-toggle input[type="checkbox"] { display: none; }
+
+.ios-track {
+  display: block;
+  width: calc(72 * var(--wu));
+  height: calc(38 * var(--wu));
+  background: #1e1e1e;
+  border: calc(1.5 * var(--wu)) solid #2a2a2a;
+  border-radius: calc(20 * var(--wu));
+  position: relative;
+  overflow: hidden;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.ios-knob {
+  position: absolute;
+  top: calc(3 * var(--wu));
+  left: calc(3 * var(--wu));
+  width: calc(30 * var(--wu));
+  height: calc(30 * var(--wu));
+  border-radius: 50%;
+  background: #444;
+  box-shadow: 0 calc(1.5 * var(--wu)) calc(5 * var(--wu)) rgba(0,0,0,0.55);
+  transition: left 0.25s, background 0.25s;
+}
+
+.ios-toggle input:checked + .ios-track {
+  background: #2a2a2a;
+  border-color: #747474;
+}
+.ios-toggle input:checked + .ios-track .ios-knob {
+  left: calc(37 * var(--wu));
+  background: #ffffff;
+}

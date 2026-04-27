@@ -1,0 +1,217 @@
+/* Weather widget — Apple/iOS aesthetic */
+
+#widget-weather {
+  display: flex;
+  flex-direction: column;
+  padding: 0 calc(20 * var(--wu)) calc(4 * var(--wu));
+  gap: 0;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+.wx-forecast-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.wx-forecast-list::-webkit-scrollbar { display: none; }
+
+/* ── Weather icons — local wi-* PNGs ── */
+.wx-ico {
+  display: block;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1) opacity(0.85);
+}
+.wx-ico.sunny {
+  filter: brightness(0) saturate(100%) invert(88%) sepia(60%) saturate(600%) hue-rotate(5deg) brightness(1.1) drop-shadow(0 0 calc(2 * var(--wu)) rgba(255, 238, 0, 0.4));
+}
+.wx-ico.night {
+  filter: brightness(0) invert(1) opacity(0.55);
+}
+.ico-xs { width: calc(22 * var(--wu)); height: calc(22 * var(--wu)); opacity: 0.7; }
+.ico-sm { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
+.ico-md { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
+
+/* ── Header ── */
+.wx-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: calc(3 * var(--wu));
+  flex-shrink: 0;
+}
+
+.wx-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: calc(10 * var(--wu));
+}
+
+.wx-today-lbl {
+  font-size: calc(28 * var(--wu));
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: calc(-0.5 * var(--wu));
+  line-height: 1.1;
+}
+
+.wx-desc {
+  font-size: calc(17 * var(--wu));
+  font-weight: 300;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: calc(0.1 * var(--wu));
+}
+
+.wx-sun-row {
+  display: flex;
+  gap: calc(10 * var(--wu));
+  align-items: center;
+  margin-top: calc(1 * var(--wu));
+}
+
+.sun-badge {
+  display: flex;
+  align-items: center;
+  gap: calc(3 * var(--wu));
+  font-size: calc(13 * var(--wu));
+  font-weight: 400;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: calc(0.2 * var(--wu));
+}
+.sun-badge svg {
+  width: calc(12 * var(--wu));
+  height: calc(12 * var(--wu));
+  flex-shrink: 0;
+}
+
+/* ── Hourly strip ── */
+.wx-hourly-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  padding-bottom: calc(6 * var(--wu));
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  cursor: grab;
+  user-select: none;
+}
+.wx-hourly-strip:active { cursor: grabbing; }
+.wx-hourly-strip::-webkit-scrollbar { display: none; }
+
+.hour-col {
+  flex: 0 0 calc(66 * var(--wu));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(2 * var(--wu));
+}
+
+.hour-lbl {
+  font-size: calc(12 * var(--wu));
+  font-weight: 400;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+  letter-spacing: calc(0.1 * var(--wu));
+}
+.hour-lbl.now {
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+
+.hour-temp {
+  font-size: calc(13 * var(--wu));
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+}
+
+/* ── Divider ── */
+.wx-divider {
+  height: calc(1 * var(--wu));
+  background: rgba(255,255,255,0.08);
+  margin: 0 0 calc(2 * var(--wu));
+  flex-shrink: 0;
+}
+
+/* ── Forecast list ── */
+.wx-forecast-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  cursor: grab;
+  justify-content: space-evenly;
+}
+.wx-forecast-list::-webkit-scrollbar { display: none; }
+.wx-forecast-list:active { cursor: grabbing; }
+
+.fcast-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: calc(6 * var(--wu)) 0;
+  gap: calc(12 * var(--wu));
+}
+
+.fcast-name {
+  font-size: calc(18 * var(--wu));
+  font-weight: 400;
+  color: rgba(255,255,255,0.55);
+  width: calc(85 * var(--wu));
+  flex-shrink: 0;
+  letter-spacing: calc(0.1 * var(--wu));
+}
+.fcast-row.today .fcast-name {
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Apple-style gradient line between icon and temp */
+.fcast-line-wrap {
+  flex: 1;
+  height: calc(4 * var(--wu));
+  background: rgba(255,255,255,0.1);
+  border-radius: calc(2 * var(--wu));
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(4 * var(--wu));
+}
+.fcast-line-fill {
+  position: absolute;
+  height: 100%;
+  border-radius: calc(2 * var(--wu));
+}
+
+.fcast-hi {
+  font-size: calc(18 * var(--wu));
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  min-width: calc(40 * var(--wu));
+  text-align: right;
+}
+.fcast-lo {
+  font-size: calc(18 * var(--wu));
+  font-weight: 300;
+  color: rgba(255,255,255,0.3);
+  min-width: calc(40 * var(--wu));
+  text-align: right;
+  margin-left: calc(8 * var(--wu));
+}
+
+/* Adjust for very thin widgets */
+@container (max-width: 300px) {
+  .fcast-name { width: calc(65 * var(--wu)); font-size: calc(16 * var(--wu)); }
+  .fcast-row { gap: calc(8 * var(--wu)); }
+  .fcast-line-wrap { margin: 0 calc(2 * var(--wu)); }
+}

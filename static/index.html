@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1080, initial-scale=1">
+  <title>MagicMirror</title>
+  <link rel="stylesheet" href="/css/main.css">
+  <!-- Dynamic widget CSS will be injected here -->
+  <style id="dynamic-styles"></style>
+</head>
+<body>
+  <div id="mirror">
+    <!-- Dynamic widget containers will be injected here -->
+  </div>
+
+  <!-- Always-on-top overlays -->
+  <div id="sleep-overlay"  class="overlay hidden"></div>
+  <div id="ring-overlay"   class="overlay hidden"></div>
+  <div id="alert-overlay"  class="overlay hidden"></div>
+
+  <!-- Fixed control bar — always visible -->
+  <div id="controls">
+    <button id="btn-sleep"    class="ctrl-btn" title="Sleep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+      </svg>
+    </button>
+    <button id="btn-ring"     class="ctrl-btn" title="Ring Light">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+      </svg>
+    </button>
+    <button id="btn-refresh"  class="ctrl-btn" title="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3.51 15a9 9 0 1 0 .49-4.5L1 10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <a href="/settings" class="ctrl-btn" title="Settings" style="display:flex;align-items:center;justify-content:center;text-decoration:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+    </a>
+  </div>
+
+  <!-- Layout switcher — bottom right -->
+  <div id="layout-switcher">
+    <button id="btn-layout" class="ctrl-btn" title="Switch Layout">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+    </button>
+    <span id="layout-label">Default</span>
+  </div>
+
+  <script src="/js/ws.js"></script>
+  <script>
+    // Global registry for widget classes
+    window.WidgetClasses = {};
+    window.activeWidgets = [];
+
+    // Dynamically load widgets
+    fetch('/api/widgets')
+      .then(r => r.json())
+      .then(widgets => {
+        window.activeWidgets = widgets;
+        const mirror = document.getElementById('mirror');
+        
+        let loadedScripts = 0;
+        
+        if (widgets.length === 0) {
+            loadMainApp();
+            return;
+        }
+
+        widgets.forEach(w => {
+          // Special case: hue needs data-wu-base
+          let div = document.createElement('div');
+          div.id = `widget-${w}`;
+          div.className = 'widget';
+          if (w === 'hue') div.setAttribute('data-wu-base', '480');
+          mirror.appendChild(div);
+
+          let link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = `/widgets/${w}/${w}.css`;
+          document.head.appendChild(link);
+
+          let script = document.createElement('script');
+          script.src = `/widgets/${w}/${w}.js`;
+          script.onload = () => {
+              loadedScripts++;
+              if (loadedScripts === widgets.length) {
+                  loadMainApp();
+              }
+          };
+          script.onerror = () => {
+              console.error("Failed to load script for widget " + w);
+              loadedScripts++;
+              if (loadedScripts === widgets.length) {
+                  loadMainApp();
+              }
+          };
+          document.body.appendChild(script);
+        });
+      })
+      .catch(e => console.error("Error loading widgets:", e));
+
+      function loadMainApp() {
+          let script = document.createElement('script');
+          script.src = '/js/app.js';
+          document.body.appendChild(script);
+      }
+  </script>
+</body>
+</html>

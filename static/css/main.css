@@ -1,0 +1,176 @@
+/* ── Fonts ── */
+@font-face { font-family:'SFPro'; font-weight:100; font-display:swap; src:url('/fonts/SFProDisplay-Thin.ttf') format('truetype'); }
+@font-face { font-family:'SFPro'; font-weight:300; font-display:swap; src:url('/fonts/SFProDisplay-Light.ttf') format('truetype'); }
+@font-face { font-family:'SFPro'; font-weight:400; font-display:swap; src:url('/fonts/SFProDisplay-Regular.ttf') format('truetype'); }
+@font-face { font-family:'SFPro'; font-weight:500; font-display:swap; src:url('/fonts/SFProDisplay-Medium.ttf') format('truetype'); }
+@font-face { font-family:'SFPro'; font-weight:600; font-display:swap; src:url('/fonts/SFProDisplay-Semibold.ttf') format('truetype'); }
+@font-face { font-family:'SFPro'; font-weight:700; font-display:swap; src:url('/fonts/SFProDisplay-Bold.ttf') format('truetype'); }
+@font-face { font-family:'Rubik'; font-weight:400; font-display:swap; src:url('/fonts/Rubik-Regular.ttf') format('truetype'); }
+@font-face { font-family:'Rubik'; font-weight:500; font-display:swap; src:url('/fonts/Rubik-Medium.ttf') format('truetype'); }
+@font-face { font-family:'Rubik'; font-weight:700; font-display:swap; src:url('/fonts/Rubik-Bold.ttf') format('truetype'); }
+
+/* ── Reset ── */
+*, *::before, *::after { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+html, body {
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  cursor: none;
+  user-select: none;
+}
+
+/* ── Mirror grid ── */
+#mirror {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(24, 80px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#controls, #layout-switcher {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+/* --wu = min(width,height)/240 — set by app.js ResizeObserver; scales widget UI when grid cell resizes */
+.widget {
+  overflow: visible;
+  position: relative;
+  --wu: 1px;
+  padding-top: calc(10 * var(--wu)) !important;
+  contain: layout;
+}
+
+/* Loading skeletons — inherit --wu from .widget */
+.widget-skeleton-weather {
+  display: flex;
+  flex-direction: column;
+  gap: calc(18 * var(--wu));
+  padding: calc(20 * var(--wu)) calc(40 * var(--wu));
+}
+.widget-skeleton-weather .sk-line { width: calc(220 * var(--wu)); height: calc(28 * var(--wu)); border-radius: calc(6 * var(--wu)); }
+.widget-skeleton-weather .sk-mid { height: calc(72 * var(--wu)); border-radius: calc(6 * var(--wu)); }
+.widget-skeleton-weather .sk-tall { height: calc(200 * var(--wu)); border-radius: calc(6 * var(--wu)); }
+
+.widget-skeleton-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--wu));
+  padding: calc(16 * var(--wu)) calc(32 * var(--wu));
+}
+.widget-skeleton-calendar .sk-row { height: calc(52 * var(--wu)); border-radius: calc(6 * var(--wu)); }
+
+.widget-skeleton-hue {
+  display: flex;
+  gap: calc(16 * var(--wu));
+  padding: calc(24 * var(--wu)) calc(40 * var(--wu));
+  height: 100%;
+  align-items: stretch;
+}
+.widget-skeleton-hue .sk-col { width: calc(80 * var(--wu)); flex-shrink: 0; }
+.widget-skeleton-hue .sk-rest { flex: 1; min-width: 0; min-height: calc(48 * var(--wu)); }
+
+/* ── Skeleton shimmer — Apple-style ── */
+.widget .skeleton-block {
+  border-radius: calc(8 * var(--wu));
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.09) 50%,
+    rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Controls (no backdrop-filter — expensive on Pi GPU) ── */
+#controls {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 9000;
+  background: rgba(18, 18, 20, 0.92);
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+#layout-switcher {
+  position: fixed;
+  bottom: 40px;
+  right: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9000;
+  background: rgba(18, 18, 20, 0.92);
+  border: 0.5px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 8px 16px 8px 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+#layout-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.3px;
+}
+
+/* ── Control buttons — Apple icon button style ── */
+.ctrl-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s, background 0.18s;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.ctrl-btn:hover  { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.1); }
+.ctrl-btn.active { color: #fff; background: rgba(255,255,255,0.15); }
+.ctrl-btn svg    { width: 22px; height: 22px; flex-shrink: 0; }
+
+/* ── Overlays ── */
+.overlay { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.overlay.hidden { display: none; }
+
+#sleep-overlay  { background: #000; pointer-events: all; z-index: 400; }
+#ring-overlay   { pointer-events: none; box-sizing: border-box; }
+
+/* Alert overlay styles live in css/widgets/redalert.css */
+
+/* ── Hebrew / RTL ── */
+.rtl { direction: rtl; font-family: 'Rubik', sans-serif; }
