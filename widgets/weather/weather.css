@@ -23,24 +23,23 @@
 .wx-ico {
   display: block;
   flex-shrink: 0;
-  filter: brightness(0) invert(1) opacity(0.85);
 }
 .wx-ico.sunny {
-  filter: brightness(0) saturate(100%) invert(88%) sepia(60%) saturate(600%) hue-rotate(5deg) brightness(1.1) drop-shadow(0 0 calc(2 * var(--wu)) rgba(255, 238, 0, 0.4));
+  filter: drop-shadow(0 0 calc(2 * var(--wu)) rgba(255, 238, 0, 0.4));
 }
 .wx-ico.night {
-  filter: brightness(0) invert(1) opacity(0.55);
+  opacity: 0.8;
 }
-.ico-xs { width: calc(22 * var(--wu)); height: calc(22 * var(--wu)); opacity: 0.7; }
+.ico-xs { width: calc(22 * var(--wu)); height: calc(22 * var(--wu)); }
 .ico-sm { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
 .ico-md { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
 
 /* ── Header ── */
 .wx-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: calc(3 * var(--wu));
+  margin-bottom: calc(10 * var(--wu));
   flex-shrink: 0;
 }
 
@@ -69,7 +68,6 @@
   display: flex;
   gap: calc(10 * var(--wu));
   align-items: center;
-  margin-top: calc(1 * var(--wu));
 }
 
 .sun-badge {
@@ -93,6 +91,7 @@
   align-items: flex-end;
   gap: 0;
   padding-bottom: calc(6 * var(--wu));
+  margin-left: calc(-7 * var(--wu));
   flex-shrink: 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -105,7 +104,7 @@
 .wx-hourly-strip::-webkit-scrollbar { display: none; }
 
 .hour-col {
-  flex: 0 0 calc(66 * var(--wu));
+  flex: 0 0 calc(48 * var(--wu));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -151,7 +150,6 @@
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   cursor: grab;
-  justify-content: space-evenly;
 }
 .wx-forecast-list::-webkit-scrollbar { display: none; }
 .wx-forecast-list:active { cursor: grabbing; }
@@ -168,7 +166,7 @@
   font-size: calc(18 * var(--wu));
   font-weight: 400;
   color: rgba(255,255,255,0.55);
-  width: calc(85 * var(--wu));
+  width: calc(110 * var(--wu));
   flex-shrink: 0;
   letter-spacing: calc(0.1 * var(--wu));
 }
@@ -184,13 +182,26 @@
   background: rgba(255,255,255,0.1);
   border-radius: calc(2 * var(--wu));
   position: relative;
-  overflow: hidden;
   margin: 0 calc(4 * var(--wu));
 }
 .fcast-line-fill {
   position: absolute;
   height: 100%;
   border-radius: calc(2 * var(--wu));
+  overflow: hidden;
+}
+
+.fcast-cur-dot {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(7 * var(--wu));
+  height: calc(7 * var(--wu));
+  border-radius: 50%;
+  background: #fff;
+  border: calc(1.5 * var(--wu)) solid rgb(0, 0, 0);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .fcast-hi {
@@ -214,4 +225,162 @@
   .fcast-name { width: calc(65 * var(--wu)); font-size: calc(16 * var(--wu)); }
   .fcast-row { gap: calc(8 * var(--wu)); }
   .fcast-line-wrap { margin: 0 calc(2 * var(--wu)); }
+}
+
+/* ── Weather Modal Content ── */
+.wx-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.wx-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.wx-modal-header .wx-ico.ico-lg {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+}
+
+.wx-modal-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wx-modal-day {
+  font-size: 36px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.wx-modal-date {
+  font-size: 24px;
+  font-weight: 400;
+  color: #888;
+  margin-left: 12px;
+}
+
+.wx-modal-desc {
+  font-size: 22px;
+  color: #aaa;
+  font-weight: 400;
+}
+
+.wx-modal-temps {
+  display: flex;
+  gap: 48px;
+  padding: 24px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  justify-content: center;
+}
+
+.wx-modal-temp-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.wx-modal-temp-item .label {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #666;
+}
+
+.wx-modal-temp-item .value {
+  font-size: 32px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.wx-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.wx-modal-stat:last-child:nth-child(odd) {
+  grid-column: span 2;
+}
+
+.wx-modal-stat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+}
+
+.wx-modal-stat .wx-ico {
+  width: 24px;
+  height: 24px;
+  opacity: 0.6;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-info .label {
+  font-size: 13px;
+  color: #888;
+  font-weight: 400;
+}
+
+.stat-info .value {
+  font-size: 18px;
+  color: #eee;
+  font-weight: 600;
+}
+
+.stat-info .value small {
+  font-size: 12px;
+  color: #666;
+  font-weight: 400;
+}
+
+/* ── Weather Modal Graph ── */
+.wx-modal-graphs {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.wx-modal-graph-container {
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wx-graph-header {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+  font-weight: 600;
+  text-align: center;
+}
+
+.wx-svg-graph {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.graph-label {
+  font-size: 10px;
+  fill: #666;
+  font-weight: 400;
 }

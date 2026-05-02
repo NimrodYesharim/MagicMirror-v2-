@@ -1,7 +1,137 @@
 class CalendarWidget {
   constructor(containerId) {
     this.el = document.getElementById(containerId);
+    this.events = [];
     this._showSkeleton();
+    this._initEvents();
+  }
+
+  _initEvents() {
+    const el = this.el;
+    let active = false, startX = 0, startY = 0, scrollTop = 0;
+    let velY = 0, lastY = 0, lastT = 0, rafId = null;
+    let hasMoved = false;
+    let targetRow = null;
+    let touchX = 0, touchY = 0;
+
+    const stop = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } };
+    const coast = () => {
+      velY *= 0.90;
+      el.scrollTop -= velY * 16;
+      if (Math.abs(velY) > 0.15) rafId = requestAnimationFrame(coast);
+      else rafId = null;
+    };
+
+    el.addEventListener('pointerdown', e => {
+      stop();
+      active = true;
+      hasMoved = false;
+      targetRow = e.target.closest('.cal-event-row');
+      startX = touchX = e.clientX;
+      startY = lastY = touchY = e.clientY;
+      scrollTop = el.scrollTop;
+      lastT = Date.now(); velY = 0;
+      el.setPointerCapture(e.pointerId);
+    });
+
+    el.addEventListener('pointermove', e => {
+      if (!active) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > 10 || dy > 10) hasMoved = true;
+
+      const now = Date.now(), dt = now - lastT || 1;
+      velY = (lastY - e.clientY) / dt;
+      lastY = e.clientY; lastT = now;
+      el.scrollTop = scrollTop + (startY - e.clientY);
+    });
+
+    el.addEventListener('pointerup', e => {
+      if (!active) return;
+      active = false;
+      el.releasePointerCapture(e.pointerId);
+
+      if (!hasMoved && targetRow) {
+        // It's a tap!
+        const id = targetRow.dataset.id;
+        const event = this.events.find(ev => ev.id === id);
+        if (event) this._showEventDetail(event, touchX, touchY);
+      } else if (Math.abs(velY) > 0.2) {
+        rafId = requestAnimationFrame(coast);
+      }
+      targetRow = null;
+    });
+
+    el.addEventListener('pointercancel', e => { 
+      active = false; 
+      velY = 0; 
+      el.releasePointerCapture(e.pointerId);
+    });
+  }
+
+  _showEventDetail(e, x, y) {
+    const modal = document.getElementById('modal-overlay');
+    const card = document.getElementById('modal-card');
+    if (!modal || !card) return;
+
+    // Set animation origin relative to screen center
+    if (x !== undefined && y !== undefined) {
+      const vx = (x - window.innerWidth / 2);
+      const vy = (y - window.innerHeight / 2);
+      card.style.setProperty('--origin-x', `${vx}px`);
+      card.style.setProperty('--origin-y', `${vy}px`);
+    }
+
+    const isRtl = e.is_hebrew;
+    const rtlClass = isRtl ? ' rtl' : '';
+    const timeStr = e.all_day ? 'All Day' : this._timeRange(e.start, e.end);
+    const dateStr = this._dateInfo(e.start).num + ' ' + this._dateInfo(e.start).day;
+
+    card.innerHTML = `
+      <div class="cal-modal-content${rtlClass}">
+        <div class="cal-modal-header">
+          <div class="cal-modal-color" style="background:${e.color}"></div>
+          <div class="cal-modal-title">${this._esc(e.title)}</div>
+        </div>
+        <div class="cal-modal-meta">
+          <div class="cal-modal-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+            <span>${this._esc(e.calendar_name)}</span>
+          </div>
+          <div class="cal-modal-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>${dateStr}</span>
+          </div>
+          <div class="cal-modal-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>${timeStr}</span>
+          </div>
+          ${e.location ? `
+          <div class="cal-modal-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <span>${this._esc(e.location)}</span>
+          </div>` : ''}
+        </div>
+        ${e.description ? `<div class="cal-modal-description">${this._esc(e.description).replace(/\n/g, '<br>')}</div>` : ''}
+      </div>
+    `;
+
+    document.body.classList.add('modal-open');
+    modal.classList.add('open');
+
+    const close = (evt) => {
+      if (evt.target === modal || (evt.type === 'keydown' && evt.key === 'Escape')) {
+        document.body.classList.remove('modal-open');
+        modal.classList.remove('open');
+        window.removeEventListener('keydown', close);
+        modal.removeEventListener('click', close);
+      }
+    };
+    // Use timeout to avoid immediate closure if the click bubbles
+    setTimeout(() => {
+        modal.addEventListener('click', close);
+        window.addEventListener('keydown', close);
+    }, 10);
   }
 
   _showSkeleton() {
@@ -12,14 +142,14 @@ class CalendarWidget {
   }
 
   render(data) {
-    const events = data.events || [];
-    if (!events.length) {
+    this.events = data.events || [];
+    if (!this.events.length) {
       this.el.innerHTML = `<div class="cal-empty">No upcoming events</div>`;
       return;
     }
     // Group by start date — no fake entries for intermediate days
     const byDay = new Map();
-    for (const e of events) {
+    for (const e of this.events) {
       const key = (e.start || '').slice(0, 10);
       if (!byDay.has(key)) byDay.set(key, []);
       byDay.get(key).push(e);
@@ -27,40 +157,6 @@ class CalendarWidget {
     const sorted = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
     this.el.innerHTML = sorted.map(([date, group]) => this._dayHTML(date, group)).join('');
     this._initMarquees();
-    this._initScroll();
-  }
-
-  _initScroll() {
-    const el = this.el;
-    let active = false, startY = 0, scrollTop = 0;
-    let velY = 0, lastY = 0, lastT = 0, rafId = null;
-    const stop = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } };
-    const coast = () => {
-      velY *= 0.90;
-      el.scrollTop -= velY * 16;
-      if (Math.abs(velY) > 0.15) rafId = requestAnimationFrame(coast);
-      else rafId = null;
-    };
-    el.addEventListener('pointerdown', e => {
-      stop();
-      active = true;
-      startY = lastY = e.clientY;
-      scrollTop = el.scrollTop;
-      lastT = Date.now(); velY = 0;
-      el.setPointerCapture(e.pointerId);
-    });
-    el.addEventListener('pointermove', e => {
-      if (!active) return;
-      const now = Date.now(), dt = now - lastT || 1;
-      velY = (lastY - e.clientY) / dt;
-      lastY = e.clientY; lastT = now;
-      el.scrollTop = scrollTop + (startY - e.clientY);
-    });
-    el.addEventListener('pointerup', () => {
-      active = false;
-      if (Math.abs(velY) > 0.2) rafId = requestAnimationFrame(coast);
-    });
-    el.addEventListener('pointercancel', () => { active = false; velY = 0; });
   }
 
   _initMarquees() {
@@ -102,7 +198,7 @@ class CalendarWidget {
       const locHTML  = locRaw
         ? `<span class="cal-meta-sep"> | </span><span class="cal-loc-part${locRtl}"><span>${this._esc(locRaw)}</span></span>`
         : '';
-      return `<div class="cal-event-row${isMulti ? ' cal-event-multi' : ''}">
+      return `<div class="cal-event-row${isMulti ? ' cal-event-multi' : ''}" data-id="${e.id}">
         <div class="cal-border" style="background:${e.color}"></div>
         <div class="cal-event-content">
           <div class="cal-title${rtlClass}"${lang}><span>${this._esc(e.title)}</span></div>

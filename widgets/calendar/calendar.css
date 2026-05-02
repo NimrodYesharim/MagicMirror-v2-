@@ -2,9 +2,10 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden;
   scrollbar-width: none;
   cursor: grab;
+  touch-action: none;
 }
 #widget-calendar:active { cursor: grabbing; }
 #widget-calendar::-webkit-scrollbar { display: none; }
@@ -19,27 +20,32 @@
 /* ── Day group: date col (sticky) + events column ── */
 .cal-day-group {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   flex-shrink: 0;
   border-bottom: calc(1 * var(--wu)) solid #111;
   padding: calc(6 * var(--wu)) calc(24 * var(--wu)) calc(6 * var(--wu)) calc(28 * var(--wu));
   gap: 0;
 }
 
-/* Sticky date — stays at top of scroll viewport while its group is visible */
+/* Date column — centered in its row; multi-day groups add sticky separately */
 .cal-date-col {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
+  align-self: center;
   width: calc(76 * var(--wu));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   padding-right: calc(12 * var(--wu));
-  padding-top: calc(3 * var(--wu));
   background: #000;
   z-index: 2;
+}
+
+/* Sticky only for multi-day event groups.
+   top = group padding (6wu) + half first-event height (23wu) - half date-col height (~19wu) ≈ 10wu
+   keeps the date visually centered with the first event row when clamped. */
+.cal-day-multi .cal-date-col {
+  position: sticky;
+  top: calc(10 * var(--wu));
 }
 
 .cal-date-num {
@@ -200,4 +206,76 @@
 .cal-loc-part.rtl {
   direction: rtl;
   font-family: 'Rubik', sans-serif;
+}
+
+/* ── Modal Content ── */
+.cal-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cal-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.cal-modal-color {
+  width: 8px;
+  height: 48px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.cal-modal-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.cal-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cal-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  color: #aaa;
+}
+
+.cal-modal-item svg {
+  width: 20px;
+  height: 20px;
+  stroke: #666;
+}
+
+.cal-modal-description {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #ddd;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 24px;
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cal-modal-content.rtl {
+  direction: rtl;
+  font-family: 'Rubik', sans-serif;
+}
+
+.cal-modal-content.rtl .cal-modal-header {
+  flex-direction: row;
+}
+
+.cal-modal-content.rtl .cal-modal-item {
+  flex-direction: row;
 }

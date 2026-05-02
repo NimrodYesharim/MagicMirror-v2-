@@ -1,0 +1,7 @@
+{
+  "name": "weather",
+  "label": "Weather",
+  "wsType": "weather",
+  "containerAttrs": {},
+  "settingsOrder": 10
+}

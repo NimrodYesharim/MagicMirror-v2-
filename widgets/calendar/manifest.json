@@ -1,0 +1,7 @@
+{
+  "name": "calendar",
+  "label": "Calendar",
+  "wsType": "calendar",
+  "containerAttrs": {},
+  "settingsOrder": 20
+}

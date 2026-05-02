@@ -64,7 +64,8 @@ class NewsService:
             articles = r.json().get("articles", [])
             headlines = [
                 {"title": a["title"], "source": a.get("source", {}).get("name", ""),
-                 "desc": (a.get("description") or "").strip()}
+                 "desc": (a.get("description") or "").strip(),
+                 "date": a.get("publishedAt")}
                 for a in articles if a.get("title") and a["title"] != "[Removed]"
             ]
             self._cache = {"headlines": headlines, "country": country}

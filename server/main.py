@@ -1,4 +1,5 @@
 import asyncio
+import json as _json
 import yaml
 import importlib
 import pkgutil
@@ -105,13 +106,30 @@ async def mirror_page():
 
 @app.get("/api/widgets")
 async def list_widgets():
-    """Return a list of installed widgets."""
+    """Return a list of widget manifest objects sorted by settingsOrder."""
     base_dir = Path("widgets")
     widgets = []
     if base_dir.exists():
-        for item in base_dir.iterdir():
-            if item.is_dir() and (item / f"{item.name}.js").exists():
-                widgets.append(item.name)
+        for item in sorted(base_dir.iterdir(), key=lambda p: p.name):
+            if item.name.startswith("_") or not item.is_dir():
+                continue
+            if not (item / f"{item.name}.js").exists():
+                continue
+            manifest_path = item / "manifest.json"
+            if manifest_path.exists():
+                try:
+                    manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+                except Exception:
+                    manifest = {}
+            else:
+                manifest = {}
+            manifest.setdefault("name", item.name)
+            manifest.setdefault("label", item.name.capitalize())
+            manifest.setdefault("wsType", item.name)
+            manifest.setdefault("containerAttrs", {})
+            manifest.setdefault("settingsOrder", 999)
+            widgets.append(manifest)
+    widgets.sort(key=lambda m: (m.get("settingsOrder") or 999, m.get("name", "")))
     return widgets
 
 
@@ -215,6 +233,17 @@ async def hue_create_zone(body: CreateZoneBody, request: Request):
     except Exception as e:
         raise HTTPException(status_code=503, detail=str(e))
 
+@app.delete("/api/hue/zone/{zone_id}")
+async def hue_delete_zone(zone_id: str, request: Request):
+    hue = request.app.state.widgets.get("hue")
+    if not hue: raise HTTPException(status_code=503, detail="Hue disabled")
+    try:
+        result = await hue.delete_zone(zone_id)
+        await hue._discover()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
 @app.post("/api/hue/discover")
 async def hue_discover(request: Request):
     hue = request.app.state.widgets.get("hue")
@@ -230,9 +259,17 @@ async def hue_scene(scene_id: str, request: Request):
     hue = request.app.state.widgets.get("hue")
     if hue:
         await hue.activate_scene(scene_id)
+        # Fetch updated state immediately after activation and broadcast
         state = await hue.fetch_state()
         await ws_manager.broadcast({"type": "hue_state", "data": state})
     return {"ok": True}
+
+@app.get("/api/hue/icons")
+async def hue_icons():
+    icon_dir = Path("widgets/hue/icons")
+    if not icon_dir.exists():
+        return []
+    return sorted([f.stem for f in icon_dir.glob("*.svg")])
 
 
 import logging
@@ -488,12 +525,18 @@ async def get_news_data(request: Request):
         raise HTTPException(status_code=503, detail='No data yet')
     return news.get_cached()
 
+def _read_config_safe(path: Path) -> str:
+    try:
+        return path.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        return path.read_text(encoding='cp1252')
+
 @app.get('/api/config/{widget}')
 async def get_config(widget: str):
     path = _get_config_path(widget)
     if not path.exists():
         raise HTTPException(status_code=404, detail='Config not found')
-    return yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+    return yaml.safe_load(_read_config_safe(path)) or {}
 
 @app.post('/api/config/{widget}')
 async def save_config(widget: str, request: Request):
@@ -502,6 +545,23 @@ async def save_config(widget: str, request: Request):
     body = await request.json()
     path.write_text(yaml.dump(body, allow_unicode=True, default_flow_style=False), encoding='utf-8')
     
+    # Notify widget of config change
+    if widget in request.app.state.widgets:
+        svc = request.app.state.widgets[widget]
+        if widget == 'hue':
+            await svc._discover()
+            state = svc.get_cached_state()
+            if state:
+                await ws_manager.broadcast({"type": "hue_state", "data": state})
+        elif hasattr(svc, "force_fetch"):
+            data = await svc.force_fetch()
+            if data:
+                await ws_manager.broadcast({"type": widget, "data": data})
+        elif hasattr(svc, "fetch"):
+            data = await svc.fetch()
+            if data:
+                await ws_manager.broadcast({"type": widget, "data": data})
+
     if widget == 'layout' or widget == 'display':
         layout  = yaml.safe_load(Path("config/layout.yaml").read_text(encoding='utf-8'))
         display = yaml.safe_load(Path("config/display.yaml").read_text(encoding='utf-8'))
@@ -568,6 +628,38 @@ async def _ctrl_shutdown():
 @_control_app.get("/api/calendar/list-all")
 async def _ctrl_calendar_list_all(request: Request):
     return await calendar_list_all(request)
+
+@_control_app.get("/api/hue/resources")
+async def _ctrl_hue_resources(request: Request):
+    return await hue_resources(request)
+
+@_control_app.get("/api/hue/scenes-list")
+async def _ctrl_hue_scenes_list(request: Request):
+    return await hue_scenes_list(request)
+
+@_control_app.get("/api/hue/lights")
+async def _ctrl_hue_lights(request: Request):
+    return await hue_lights(request)
+
+@_control_app.get("/api/hue/icons")
+async def _ctrl_hue_icons():
+    return await hue_icons()
+
+@_control_app.post("/api/hue/pair")
+async def _ctrl_hue_pair(request: Request):
+    return await hue_pair(request)
+
+@_control_app.post("/api/hue/discover")
+async def _ctrl_hue_discover(request: Request):
+    return await hue_discover(request)
+
+@_control_app.post("/api/hue/zone")
+async def _ctrl_hue_create_zone(body: CreateZoneBody, request: Request):
+    return await hue_create_zone(body, request)
+
+@_control_app.delete("/api/hue/zone/{zone_id}")
+async def _ctrl_hue_delete_zone(zone_id: str, request: Request):
+    return await hue_delete_zone(zone_id, request)
 
 @_control_app.get("/api/system/info")
 async def _ctrl_system_info():

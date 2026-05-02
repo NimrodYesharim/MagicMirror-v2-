@@ -19,5 +19,5 @@ if not CREDS.exists():
 
 flow = InstalledAppFlow.from_client_secrets_file(str(CREDS), SCOPES)
 creds = flow.run_local_server(port=0)
-TOKEN.write_text(creds.to_json())
+TOKEN.write_text(creds.to_json(), encoding='utf-8')
 print(f"Token saved to {TOKEN}. You can now start the mirror.")

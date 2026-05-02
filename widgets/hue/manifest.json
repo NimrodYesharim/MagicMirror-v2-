@@ -1,0 +1,7 @@
+{
+  "name": "hue",
+  "label": "Hue Lights",
+  "wsType": "hue_state",
+  "containerAttrs": { "data-wu-base": "480" },
+  "settingsOrder": 40
+}

@@ -45,7 +45,7 @@ class CalendarService:
             creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
             if creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                TOKEN_PATH.write_text(creds.to_json())
+                TOKEN_PATH.write_text(creds.to_json(), encoding='utf-8')
             return creds
         except Exception as e:
             print(f"Calendar credential error: {e}")
@@ -94,9 +94,14 @@ class CalendarService:
                         is_heb = self.config.get("hebrew", False) and _is_hebrew(title)
                         loc = (e.get("location") or "").strip() or None
 
+                        desc = (e.get("description") or "").strip() or None
+                        cal_name = cal_cfg.get("name", "Calendar")
+
                         events.append({
                             "id": e["id"],
                             "title": title,
+                            "description": desc,
+                            "calendar_name": cal_name,
                             "is_hebrew": is_heb,
                             "start": start.get("dateTime") or start.get("date"),
                             "end": end.get("dateTime") or end.get("date"),

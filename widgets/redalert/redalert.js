@@ -37,3 +37,8 @@ const RedAlert = (() => {
 
   return { handle };
 })();
+
+window.WidgetClasses = window.WidgetClasses || {};
+window.WidgetClasses['redalert'] = class RedAlertWidget {
+  render(data) { RedAlert.handle(data); }
+};

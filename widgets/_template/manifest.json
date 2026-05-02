@@ -1,0 +1,7 @@
+{
+  "name": "mywidget",
+  "label": "My Widget",
+  "wsType": "mywidget",
+  "containerAttrs": {},
+  "settingsOrder": 100
+}

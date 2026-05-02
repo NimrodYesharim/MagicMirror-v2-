@@ -11,6 +11,16 @@ MIREK_MIN = 153
 MIREK_MAX = 500
 
 
+def _read_yaml(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        content = path.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        content = path.read_text(encoding='cp1252')
+    return yaml.safe_load(content) or {}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _normalize(name: str) -> str:
@@ -37,8 +47,10 @@ def _xy_to_rgb(x: float, y: float, bri: float = 1.0) -> tuple:
 
 
 def _mirek_to_rgb(mirek: int) -> tuple:
+    if not mirek or mirek <= 0: return (255, 255, 255)
     kelvin = 1_000_000 / mirek
     t = kelvin / 100
+    if t < 1: t = 1
     if t <= 66:
         r = 255
         g = max(0, min(255, int(99.4708025861 * math.log(t) - 161.1195681661)))
@@ -97,9 +109,10 @@ class HueService:
         self.config: dict = {}
         self._cached_state: Optional[dict] = None
         self._client: Optional[httpx.AsyncClient] = None
+        self._room_to_light_ids: dict = {}  # room_id -> [light_id, ...]
 
     async def initialize(self):
-        self.config = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8')) or {}
+        self.config = _read_yaml(CONFIG_PATH)
         self._client = httpx.AsyncClient(verify=False, timeout=10.0)
         if not self.config.get("username"):
             print("Hue: no username. POST /api/hue/pair after pressing bridge link button.")
@@ -121,32 +134,56 @@ class HueService:
 
     async def _discover(self):
         try:
+            self.reload_config()
             rooms = (await self._get("/resource/room"))["data"]
             zones = (await self._get("/resource/zone"))["data"]
             scenes = (await self._get("/resource/scene"))["data"]
             gl_data = (await self._get("/resource/grouped_light"))["data"]
 
-            by_name = {}
+            # Build room_id → [light_id] map (rooms via device children, zones directly)
+            devices = (await self._get("/resource/device"))["data"]
+            device_to_lights = {
+                dev["id"]: [s["rid"] for s in dev.get("services", []) if s["rtype"] == "light"]
+                for dev in devices
+            }
+            for g in rooms:
+                device_ids = [c["rid"] for c in g.get("children", []) if c.get("rtype") == "device"]
+                self._room_to_light_ids[g["id"]] = [
+                    lid for did in device_ids for lid in device_to_lights.get(did, [])
+                ]
+            for g in zones:
+                self._room_to_light_ids[g["id"]] = [
+                    c["rid"] for c in g.get("children", []) if c.get("rtype") == "light"
+                ]
+
+            by_id = {}
+            rid_to_name = {}
             for g in rooms + zones:
-                n = _normalize(g["metadata"]["name"])
                 gl_id = next((s["rid"] for s in g.get("services", []) if s["rtype"] == "grouped_light"), None)
-                by_name[n] = {"room_id": g["id"], "grouped_light_id": gl_id}
+                by_id[g["id"]] = {"room_id": g["id"], "grouped_light_id": gl_id}
+                rid_to_name[g["id"]] = g["metadata"]["name"]
+
+            sid_to_room = {
+                s["id"]: rid_to_name.get(s.get("group", {}).get("rid"), "")
+                for s in scenes
+            }
 
             master = self.config.get("master", {})
-            mn = _normalize(master.get("name", ""))
-            if mn in by_name and not master.get("grouped_light_id"):
-                master.update(by_name[mn])
+            m_rid = master.get("room_id")
+            if m_rid in by_id:
+                master.update(by_id[m_rid])
 
+            # Only update rooms that ALREADY exist in the config
             for cr in self.config.get("rooms", []):
-                n = _normalize(cr["name"])
-                if n in by_name and not cr.get("grouped_light_id"):
-                    cr.update(by_name[n])
+                rid = cr.get("room_id")
+                if rid in by_id:
+                    cr.update(by_id[rid])
 
-            scenes_by_name = {}
+            scenes_by_id = {}
             for s in scenes:
-                n = _normalize(s["metadata"]["name"])
                 colors = []
                 for action in s.get("actions", []):
+                    # ... (color extraction code) ...
                     a = action.get("action", {})
                     bri = a.get("dimming", {}).get("brightness", 100) / 100
                     if "color" in a:
@@ -154,36 +191,53 @@ class HueService:
                         colors.append(_xy_to_rgb(xy.get("x", 0), xy.get("y", 0), bri))
                     elif "color_temperature" in a:
                         colors.append(_mirek_to_rgb(a["color_temperature"].get("mirek", 300)))
-                scenes_by_name[n] = {"scene_id": s["id"], "gradient": _colors_to_gradient(colors)}
+                scenes_by_id[s["id"]] = {"gradient": _colors_to_gradient(colors)}
 
             for cs in self.config.get("scenes", []):
-                n = _normalize(cs["name"])
-                if n in scenes_by_name:
-                    if not cs.get("scene_id"):
-                        cs["scene_id"] = scenes_by_name[n]["scene_id"]
-                    # gradient stays in memory only — auto-generated, not user-configurable
-                    cs["_gradient"] = scenes_by_name[n]["gradient"]
+                sid = cs.get("scene_id")
+                if sid in scenes_by_id:
+                    cs["_gradient"] = scenes_by_id[sid]["gradient"]
+                    cs["_room"] = sid_to_room.get(sid, "")
 
-            # Save config without runtime-only fields
-            import copy
-            saveable = copy.deepcopy(self.config)
-            for cs in saveable.get("scenes", []):
-                cs.pop("_gradient", None)
-            CONFIG_PATH.write_text(yaml.dump(saveable, allow_unicode=True, default_flow_style=False))
             print("Hue: discovery complete.")
 
+            light_data = (await self._get("/resource/light"))["data"]
+            light_by_id = {l["id"]: l for l in light_data}
             gl_by_id = {gl["id"]: gl for gl in gl_data}
-            self._cached_state = self._build_state(gl_by_id)
+            self._cached_state = self._build_state(gl_by_id, light_by_id)
         except Exception as e:
             print(f"Hue discovery error: {e}")
 
+    def reload_config(self):
+        self.config = _read_yaml(CONFIG_PATH)
+
     async def fetch_state(self) -> dict:
-        gl_data = (await self._get("/resource/grouped_light"))["data"]
-        gl_by_id = {gl["id"]: gl for gl in gl_data}
-        self._cached_state = self._build_state(gl_by_id)
+        gl_resp, light_resp = await asyncio.gather(
+            self._get("/resource/grouped_light"),
+            self._get("/resource/light"),
+        )
+        gl_by_id    = {gl["id"]: gl for gl in gl_resp["data"]}
+        light_by_id = {l["id"]:  l  for l  in light_resp["data"]}
+        self._cached_state = self._build_state(gl_by_id, light_by_id)
         return self._cached_state
 
-    def _build_state(self, gl_by_id: dict) -> dict:
+    def _build_state(self, gl_by_id: dict, light_by_id: dict = None) -> dict:
+        if light_by_id is None:
+            light_by_id = {}
+
+        def _light_color_hex(light: dict) -> str:
+            if not light.get("on", {}).get("on", False):
+                return None
+            xy = light.get("color", {}).get("xy")
+            if xy:
+                r, g, b = _xy_to_rgb(xy["x"], xy["y"], 1.0)
+                return f"#{r:02x}{g:02x}{b:02x}"
+            mirek = light.get("color_temperature", {}).get("mirek")
+            if mirek:
+                r, g, b = _mirek_to_rgb(mirek)
+                return f"#{r:02x}{g:02x}{b:02x}"
+            return "#ffffff"
+
         def _room(cr):
             gl_id = cr.get("grouped_light_id")
             if not gl_id:
@@ -191,9 +245,16 @@ class HueService:
             gl = gl_by_id.get(gl_id, {})
             xy = gl.get("color", {}).get("xy")
             hue_deg, sat_pct = (_xy_to_hs(xy["x"], xy["y"]) if xy else (None, None))
+            room_id = cr.get("room_id")
+            light_ids = self._room_to_light_ids.get(room_id, [])
+            light_colors = [
+                c for lid in light_ids
+                if lid in light_by_id
+                if (c := _light_color_hex(light_by_id[lid])) is not None
+            ]
             return {
                 "id": gl_id,
-                "room_id": cr.get("room_id"),
+                "room_id": room_id,
                 "name": cr["name"],
                 "icon": cr.get("icon", "default"),
                 "on": gl.get("on", {}).get("on", False),
@@ -203,6 +264,7 @@ class HueService:
                 "mirek_max": MIREK_MAX,
                 "hue_deg": hue_deg,
                 "sat_pct": sat_pct,
+                "light_colors": light_colors,
             }
 
         master = self.config.get("master")
@@ -211,7 +273,8 @@ class HueService:
             "rooms": [s for cr in self.config.get("rooms", []) if (s := _room(cr))],
             "scenes": [
                 {"id": s["scene_id"], "name": s["name"],
-                 "gradient": s.get("_gradient", "conic-gradient(#444,#444)")}
+                 "gradient": s.get("_gradient", "conic-gradient(#444,#444)"),
+                 "room": s.get("_room", "")}
                 for s in self.config.get("scenes", []) if s.get("scene_id")
             ],
         }
@@ -265,6 +328,12 @@ class HueService:
         r.raise_for_status()
         return r.json()
 
+    async def delete_zone(self, zone_id: str) -> dict:
+        """Delete a zone from the bridge."""
+        r = await self._client.delete(self._url(f"/resource/zone/{zone_id}"), headers=self._headers())
+        r.raise_for_status()
+        return r.json()
+
     async def list_resources(self) -> dict:
         """Return all rooms and zones from the bridge with their grouped_light IDs."""
         rooms = (await self._get("/resource/room"))["data"]
@@ -302,7 +371,7 @@ class HueService:
             if isinstance(data, list) and "success" in data[0]:
                 username = data[0]["success"]["username"]
                 self.config["username"] = username
-                CONFIG_PATH.write_text(yaml.dump(self.config, allow_unicode=True, default_flow_style=False))
+                CONFIG_PATH.write_text(yaml.dump(self.config, allow_unicode=True, default_flow_style=False), encoding='utf-8')
                 await self._discover()
                 return {"ok": True, "username": username}
             return {"ok": False, "error": data}

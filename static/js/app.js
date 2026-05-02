@@ -47,7 +47,7 @@ async function _tryFetchJson(url) {
     const { widget, data } = results[i];
     if (data && widgets[widget] && typeof widgets[widget].render === 'function') {
       widgets[widget].render(data);
-      if (widget === 'hue') widgets[widget]._rendered = true;
+      widgets[widget]._rendered = true;
     }
   }
 })();
@@ -80,6 +80,12 @@ function _applyTemplate(idx) {
       widgets.datetime.setShowSeconds(template.show_seconds === true);
   }
 
+  // Apply template-specific scale if set
+  if (template.ui_scale) {
+    _displayConfig.ui_scale = template.ui_scale;
+  }
+  initWidgetScale();
+
   for (const [name, pos] of Object.entries(template.widgets || {})) {
     const el = document.getElementById(`widget-${name}`);
     if (!el) continue;
@@ -91,8 +97,11 @@ function _applyTemplate(idx) {
 }
 
 // ── Display config ─────────────────────────────────────────────────────────────
+let _displayConfig = {};
+
 function applyDisplay(display) {
   if (!display) return;
+  _displayConfig = display;
   const ring = document.getElementById('ring-overlay');
   const bw   = display.ring_light?.border_width ?? 120;
   const op   = display.ring_light?.opacity       ?? 0.92;
@@ -104,6 +113,9 @@ function applyDisplay(display) {
     border: `${bw}px solid rgba(255,255,255,${op})`,
     boxSizing: 'border-box',
   });
+  const gfx = display.graphics || 'high';
+  document.body.classList.remove('gfx-high', 'gfx-mid', 'gfx-low');
+  document.body.classList.add(`gfx-${gfx}`);
 }
 
 // ── Reveal mirror after layout is ready ───────────────────────────────────────
@@ -111,9 +123,8 @@ let _revealed = false;
 function _reveal() {
   if (_revealed) return;
   _revealed = true;
-  document.getElementById('mirror').style.opacity         = '1';
-  document.getElementById('controls').style.opacity       = '1';
-  document.getElementById('layout-switcher').style.opacity = '1';
+  document.getElementById('mirror').style.opacity      = '1';
+  document.getElementById('menu-toggle').style.opacity = '1';
 }
 
 // Fallback: show mirror after 4 s even if WS never delivers config
@@ -126,25 +137,27 @@ WS.on('config', ({ layout, display }) => {
   _reveal(); // no-op if already revealed by REST bootstrap
 });
 
-// Dynamic websocket dispatcher
+// Dynamic websocket dispatcher — driven by manifest wsType
 window.activeWidgets.forEach(w => {
-  let wsType = w;
-  // Special mapping for hue and redalert based on existing WS logic
-  if (w === 'hue') wsType = 'hue_state';
-  if (w === 'redalert') wsType = 'red_alert';
-  
+  const manifest = (window.widgetManifests || {})[w] || {};
+  // wsType: null means no WS subscription (e.g. datetime)
+  if (manifest.wsType === null) return;
+  const wsType = manifest.wsType !== undefined ? manifest.wsType : w;
+
   WS.on(wsType, data => {
-    if (w === 'hue') {
-      if (!widgets.hue._rendered) {
-        widgets.hue.render(data);
-      } else {
-        widgets.hue.update(data);
+    const widget = widgets[w];
+    if (!widget) return;
+    if (!widget._rendered) {
+      if (typeof widget.render === 'function') {
+        widget.render(data);
+        widget._rendered = true;
       }
-    } else if (w === 'redalert') {
-      if (typeof RedAlert !== 'undefined') RedAlert.handle(data);
-      else if (widgets.redalert) widgets.redalert.handle(data);
-    } else if (widgets[w] && typeof widgets[w].render === 'function') {
-      widgets[w].render(data);
+    } else {
+      if (typeof widget.update === 'function') {
+        widget.update(data);
+      } else if (typeof widget.render === 'function') {
+        widget.render(data);
+      }
     }
   });
 });
@@ -153,21 +166,49 @@ WS.on('hard_reload', () => {
   location.reload();
 });
 
+// ── Radial menu toggle ────────────────────────────────────────────────────────
+const menuToggle = document.getElementById('menu-toggle');
+const radialMenu = document.getElementById('radial-menu');
+
+function openMenu() {
+  radialMenu.classList.add('open');
+  menuToggle.classList.add('open');
+}
+
+function closeMenu() {
+  // Remove stagger delay so all items collapse simultaneously
+  radialMenu.querySelectorAll('.radial-item').forEach(el => {
+    el.style.transitionDelay = '0ms';
+  });
+  radialMenu.classList.remove('open');
+  menuToggle.classList.remove('open');
+  // Restore CSS-variable delays after collapse finishes
+  setTimeout(() => {
+    radialMenu.querySelectorAll('.radial-item').forEach(el => {
+      el.style.transitionDelay = '';
+    });
+  }, 300);
+}
+
+function toggleMenu() { radialMenu.classList.contains('open') ? closeMenu() : openMenu(); }
+
+menuToggle.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+// Clicks inside the radial menu don't bubble to document — menu stays open
+radialMenu.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', closeMenu);
+
 // ── Sleep overlay ─────────────────────────────────────────────────────────────
 const sleepOverlay = document.getElementById('sleep-overlay');
 const btnSleep     = document.getElementById('btn-sleep');
 
 function setSleep(on) {
-  // The sleep overlay covers #mirror but NOT #controls or #layout-switcher
-  // (those are fixed with z-index 500; sleep-overlay is z-index 1000 but
-  //  we exclude controls by setting pointer-events differently)
   sleepOverlay.classList.toggle('hidden', !on);
   btnSleep.classList.toggle('active', on);
 }
 
 btnSleep.addEventListener('click', () => setSleep(sleepOverlay.classList.contains('hidden')));
 
-// Tap the dark area (not controls) to wake
+// Tap the dark area to wake
 sleepOverlay.addEventListener('click', () => setSleep(false));
 
 // ── Ring light ────────────────────────────────────────────────────────────────
@@ -203,7 +244,8 @@ function initWidgetScale() {
     const w = el.clientWidth;
     const h = el.dataset.wuBase ? parseInt(el.dataset.wuBase) : el.clientHeight;
     const m = Math.max(1, Math.min(w, h));
-    el.style.setProperty('--wu', `${m / 360}px`);
+    const scale = _displayConfig.ui_scale ?? 360;
+    el.style.setProperty('--wu', `${m / scale}px`);
   };
   document.querySelectorAll('#mirror > .widget').forEach((el) => {
     setWu(el);

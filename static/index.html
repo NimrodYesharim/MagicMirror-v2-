@@ -17,46 +17,64 @@
   <div id="sleep-overlay"  class="overlay hidden"></div>
   <div id="ring-overlay"   class="overlay hidden"></div>
   <div id="alert-overlay"  class="overlay hidden"></div>
-
-  <!-- Fixed control bar — always visible -->
-  <div id="controls">
-    <button id="btn-sleep"    class="ctrl-btn" title="Sleep">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
-      </svg>
-    </button>
-    <button id="btn-ring"     class="ctrl-btn" title="Ring Light">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="12" r="4"/>
-        <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
-      </svg>
-    </button>
-    <button id="btn-refresh"  class="ctrl-btn" title="Refresh">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M1 4v6h6" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M3.51 15a9 9 0 1 0 .49-4.5L1 10" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <a href="/settings" class="ctrl-btn" title="Settings" style="display:flex;align-items:center;justify-content:center;text-decoration:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-      </svg>
-    </a>
+  <div id="modal-overlay"  class="overlay">
+    <div id="modal-card"></div>
   </div>
 
-  <!-- Layout switcher — bottom right -->
-  <div id="layout-switcher">
-    <button id="btn-layout" class="ctrl-btn" title="Switch Layout">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-        <rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    </button>
-    <span id="layout-label">Default</span>
+  <!-- Radial menu — 5 buttons arc from straight-up to straight-left, radius 160px -->
+  <div id="radial-menu">
+    <!-- Sleep: 90° (straight up) -->
+    <div class="radial-item" style="--tx:0px;--ty:-160px;--delay:0">
+      <button class="radial-btn" id="btn-sleep">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Ring Light: 112.5° -->
+    <div class="radial-item" style="--tx:-61px;--ty:-148px;--delay:1">
+      <button class="radial-btn" id="btn-ring">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Refresh: 135° (diagonal) -->
+    <div class="radial-item" style="--tx:-113px;--ty:-113px;--delay:2">
+      <button class="radial-btn" id="btn-refresh">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-4.5L1 10"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Settings: 157.5° -->
+    <div class="radial-item" style="--tx:-148px;--ty:-61px;--delay:3">
+      <a class="radial-btn" href="/settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </a>
+    </div>
+    <!-- Layout: 180° (straight left) — keeps label showing current template name -->
+    <div class="radial-item" style="--tx:-160px;--ty:0px;--delay:4">
+      <button class="radial-btn" id="btn-layout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </button>
+      <span class="radial-label" id="layout-label">Default</span>
+    </div>
   </div>
+
+  <!-- Hamburger menu toggle — bottom right, acts as open/close -->
+  <button id="menu-toggle" title="Menu" aria-label="Open menu">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </button>
 
   <script src="/js/ws.js"></script>
   <script>
@@ -64,26 +82,29 @@
     window.WidgetClasses = {};
     window.activeWidgets = [];
 
-    // Dynamically load widgets
+    // Dynamically load widgets from manifest objects
     fetch('/api/widgets')
       .then(r => r.json())
-      .then(widgets => {
-        window.activeWidgets = widgets;
+      .then(manifests => {
+        window.widgetManifests = {};
+        manifests.forEach(m => { window.widgetManifests[m.name] = m; });
+        window.activeWidgets = manifests.map(m => m.name);
+
         const mirror = document.getElementById('mirror');
-        
         let loadedScripts = 0;
-        
-        if (widgets.length === 0) {
+
+        if (manifests.length === 0) {
             loadMainApp();
             return;
         }
 
-        widgets.forEach(w => {
-          // Special case: hue needs data-wu-base
+        manifests.forEach(m => {
+          const w = m.name;
+
           let div = document.createElement('div');
           div.id = `widget-${w}`;
           div.className = 'widget';
-          if (w === 'hue') div.setAttribute('data-wu-base', '480');
+          Object.entries(m.containerAttrs || {}).forEach(([k, v]) => div.setAttribute(k, v));
           mirror.appendChild(div);
 
           let link = document.createElement('link');
@@ -95,16 +116,12 @@
           script.src = `/widgets/${w}/${w}.js`;
           script.onload = () => {
               loadedScripts++;
-              if (loadedScripts === widgets.length) {
-                  loadMainApp();
-              }
+              if (loadedScripts === manifests.length) loadMainApp();
           };
           script.onerror = () => {
               console.error("Failed to load script for widget " + w);
               loadedScripts++;
-              if (loadedScripts === widgets.length) {
-                  loadMainApp();
-              }
+              if (loadedScripts === manifests.length) loadMainApp();
           };
           document.body.appendChild(script);
         });

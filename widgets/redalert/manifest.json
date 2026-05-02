@@ -1,0 +1,7 @@
+{
+  "name": "redalert",
+  "label": "Red Alert",
+  "wsType": "red_alert",
+  "containerAttrs": {},
+  "settingsOrder": 50
+}

@@ -1,0 +1,16 @@
+/* Template widget styles — copy to widgets/<name>/<name>.css */
+
+#widget-mywidget {
+  /* --wu is set by app.js and equals min(width,height)/240.
+     Use calc(N * var(--wu)) for all sizes so the widget scales
+     correctly when its grid cell resizes. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(16 * var(--wu));
+  color: #fff;
+}
+
+.mywidget-root {
+  padding: calc(20 * var(--wu));
+}

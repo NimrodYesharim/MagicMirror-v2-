@@ -88,6 +88,17 @@ chromium-browser \
   --ignore-certificate-errors \
   --allow-insecure-localhost \
   --user-data-dir=/tmp/kiosk-profile \
+  \
+  --use-gl=egl \
+  --enable-gpu-rasterization \
+  --enable-zero-copy \
+  --num-raster-threads=4 \
+  --disable-smooth-scrolling \
+  --renderer-process-limit=1 \
+  --disable-dev-shm-usage \
+  --disable-background-networking \
+  --disable-features=TranslateUI,Translate \
+  \
   "https://localhost:$PORT"
 
 kill $SERVER_PID

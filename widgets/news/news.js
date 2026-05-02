@@ -4,6 +4,28 @@ class NewsWidget {
     this._articleTimer = null;
     this._articleIdx   = 0;
     this._articleData  = [];
+    this._lastData     = null;
+    this._lastMode     = null;
+
+    new ResizeObserver(() => {
+      if (!this._lastData) return;
+      const mode = this._getMode();
+      if (mode !== this._lastMode) this.render(this._lastData);
+    }).observe(this.el);
+  }
+
+  _getMode() {
+    const h = this.el.clientHeight;
+    const w = this.el.clientWidth;
+    if (w >= 600 && h < 180) return 'wide';
+    if (h >= 480) return 'article';
+    if (h >= 180) return 'stack';
+    return 'ticker';
+  }
+
+  _isRTL(text) {
+    const rtlChars = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    return rtlChars.test(text);
   }
 
   render(data) {
@@ -11,10 +33,53 @@ class NewsWidget {
     if (!headlines.length) { this.el.innerHTML = ''; return; }
     if (this._articleTimer) { clearInterval(this._articleTimer); this._articleTimer = null; }
 
-    const h = this.el.clientHeight;
-    if (h >= 480)      this._renderArticle(headlines);
-    else if (h >= 180) this._renderStack(headlines);
-    else               this._renderTicker(headlines);
+    const isRtl = headlines.some(h => this._isRTL(h.title));
+    this.el.classList.toggle('rtl', isRtl);
+
+    this._lastData = data;
+    const mode = this._getMode();
+    this._lastMode = mode;
+
+    if (mode === 'wide')       this._renderWide(headlines);
+    else if (mode === 'article')    this._renderArticle(headlines);
+    else if (mode === 'stack') this._renderStack(headlines);
+    else                       this._renderTicker(headlines);
+  }
+
+  _formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString(undefined, {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  // ── Wide mode (Full width, short height, infinite horizontal crawl) ────────
+  _renderWide(headlines) {
+    const items = headlines.map(h => {
+      const src = h.source ? `<span class="news-wide-src">${this._esc(h.source)}</span>` : '';
+      return `
+        <div class="news-wide-item">
+          ${src}
+          <span class="news-wide-title">${this._esc(h.title)}</span>
+        </div>`;
+    }).join('<span class="news-wide-sep"></span>');
+
+    this.el.innerHTML = `
+      <div class="news-wide-outer">
+        <div class="news-wide-track" id="news-wide-track">
+          ${items}<span class="news-wide-sep"></span>${items}
+        </div>
+      </div>`;
+
+    requestAnimationFrame(() => {
+      const track = document.getElementById('news-wide-track');
+      if (!track) return;
+      // Adjust speed based on content length (pixels per second)
+      const duration = Math.max(30, track.scrollWidth / 2 / 120);
+      track.style.animationDuration = `${duration}s`;
+    });
   }
 
   // ── Ticker mode (thin strip) ─────────────────────────────────────────────────
@@ -37,13 +102,12 @@ class NewsWidget {
     });
   }
 
-  // ── Stack mode (2 articles visible, touch-scrollable, 8 s auto-advance) ──────
+  // ── Stack mode (2 articles visible, auto-scrolling) ──────
   _renderStack(headlines) {
-    const items = headlines.slice(0, 10);
     this.el.innerHTML = `
       <div class="news-stack-outer">
         <div class="news-stack">
-          ${items.map(h => `
+          ${headlines.map(h => `
             <div class="news-stack-item">
               ${h.source ? `<span class="news-src">${this._esc(h.source)}</span>` : ''}
               <span class="news-stack-title">${this._esc(h.title)}</span>
@@ -52,23 +116,15 @@ class NewsWidget {
       </div>`;
 
     const outer = this.el.querySelector('.news-stack-outer');
-    const stack = this.el.querySelector('.news-stack');
-    if (!outer || !stack) return;
-
-    // Size each item to half the outer so 2 are visible at once
-    const sizeItems = () => {
-      const itemH = outer.clientHeight / 2;
-      if (itemH > 0) stack.querySelectorAll('.news-stack-item').forEach(el => { el.style.height = itemH + 'px'; });
-    };
-    requestAnimationFrame(sizeItems);
+    if (!outer) return;
 
     let idx = 0;
     const advance = () => {
-      idx = (idx + 1) % items.length;
+      idx = (idx + 1) % headlines.length;
       const itemH = outer.clientHeight / 2;
       outer.scrollTo({ top: idx * itemH, behavior: 'smooth' });
     };
-    this._articleTimer = setInterval(advance, 8000);
+    this._articleTimer = setInterval(advance, 12000);
   }
 
   // ── Single-article mode (title + desc, 30s rotate) ──────────────────────────
@@ -81,6 +137,7 @@ class NewsWidget {
         <div class="news-article-title" id="na-title"></div>
         <div class="news-article-desc"  id="na-desc"></div>
         <div class="news-article-dots"  id="na-dots"></div>
+        <div class="news-article-date"  id="na-date"></div>
       </div>`;
     this._showArticle(0);
 
@@ -116,10 +173,16 @@ class NewsWidget {
       document.getElementById('na-src').textContent   = h.source || '';
       document.getElementById('na-title').textContent = h.title  || '';
       document.getElementById('na-desc').textContent  = h.desc   || '';
+      
+      const dateEl = document.getElementById('na-date');
+      if (dateEl && h.date) {
+        dateEl.textContent = this._formatDate(h.date);
+      }
+
       const n    = this._articleData.length;
       const dots = document.getElementById('na-dots');
-      if (dots) dots.innerHTML = Array.from({length: Math.min(n, 10)}, (_, i) =>
-        `<span class="na-dot${i === idx % 10 ? ' active' : ''}"></span>`).join('');
+      if (dots) dots.innerHTML = Array.from({length: n}, (_, i) =>
+        `<span class="na-dot${i === idx ? ' active' : ''}"></span>`).join('');
       card.style.opacity = '1';
     }, 500);
   }

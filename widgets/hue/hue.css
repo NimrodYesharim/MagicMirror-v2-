@@ -2,7 +2,7 @@
   display: flex;
   align-items: stretch;
   padding: 0 calc(20 * var(--wu)) calc(20 * var(--wu)) calc(28 * var(--wu));
-  gap: calc(14 * var(--wu));
+  gap: calc(21 * var(--wu));
   border-top: calc(1 * var(--wu)) solid #1a1a1a;
   overflow: visible;
   height: 660px;
@@ -13,16 +13,24 @@
 }
 
 /* ── Scenes column ── */
+.hue-scenes-outer {
+  width: calc(70 * var(--wu));
+  flex-shrink: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
 .hue-scenes {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: calc(14 * var(--wu));
-  width: calc(70 * var(--wu));
-  flex-shrink: 0;
+  gap: calc(13 * var(--wu));
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-block: calc(10 * var(--wu));
+  scroll-snap-type: y mandatory;
 }
 .hue-scenes::-webkit-scrollbar { display: none; }
 
@@ -30,24 +38,29 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(5 * var(--wu));
+  gap: calc(4 * var(--wu));
+  flex-shrink: 0;
+  height: calc(78 * var(--wu));
+  justify-content: flex-start;
+  scroll-snap-align: center;
 }
 
 .scene-btn {
   width: calc(48 * var(--wu));
   height: calc(48 * var(--wu));
   border-radius: 50%;
-  border: calc(5 * var(--wu)) solid transparent;
-  background:
+  border: calc(4 * var(--wu)) solid transparent;
+  background: 
     linear-gradient(#000, #000) padding-box,
     var(--g) border-box;
   cursor: pointer;
   transition: transform 0.15s, opacity 0.2s;
   flex-shrink: 0;
+  box-shadow: 0 calc(2 * var(--wu)) calc(6 * var(--wu)) rgba(0,0,0,0.4);
 }
 .scene-btn:active         { transform: scale(0.88); }
-.scene-btn:not(.active)   { opacity: 0.4; }
-.scene-btn.active         { opacity: 1; border-width: calc(4 * var(--wu)); }
+.scene-btn:not(.active)   { opacity: 0.5; }
+.scene-btn.active         { opacity: 1; border-width: calc(6 * var(--wu)); }
 
 .scene-name {
   font-size: calc(9 * var(--wu));
@@ -58,6 +71,18 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.scene-room {
+  font-size: calc(7.5 * var(--wu));
+  font-weight: 400;
+  color: #383838;
+  text-align: center;
+  width: calc(64 * var(--wu));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-top: calc(-2 * var(--wu));
 }
 
 /* ── Rooms row ── */
@@ -79,10 +104,11 @@
   gap: calc(10 * var(--wu));
   padding: calc(22 * var(--wu)) calc(20 * var(--wu)) calc(18 * var(--wu));
   border-radius: calc(55 * var(--wu));
-  background: #0c0c0c;
-  border: calc(3 * var(--wu)) solid var(--border-col, #1e1e1e);
+  border: calc(3 * var(--wu)) solid transparent;
+  background:
+    linear-gradient(#0c0c0c, #0c0c0c) padding-box,
+    var(--border-gradient, linear-gradient(to bottom, #1e1e1e, #1e1e1e)) border-box;
   min-width: 0;
-  transition: border-color 0.5s;
   min-height: 0;
   container-type: size;
 }
@@ -95,6 +121,7 @@
   gap: calc(4 * var(--wu));
   flex-shrink: 0;
   padding-top: calc(2 * var(--wu));
+  position: relative;
 }
 
 .card-icon {
@@ -105,7 +132,18 @@
   transition: color 0.3s;
 }
 .room-card.on .card-icon { color: #aaa; }
-.card-icon svg { width: 100%; height: 100%; stroke-width: 1.8; }
+.card-icon svg, .card-icon .external-icon { width: 100%; height: 100%; }
+.card-icon svg { stroke-width: 1.8; }
+
+.external-icon {
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 
 .card-zone {
   font-size: calc(13 * var(--wu));
@@ -231,17 +269,34 @@
   border-radius: 50%;
   box-shadow: 0 calc(2 * var(--wu)) calc(12 * var(--wu)) rgba(0,0,0,0.8);
   cursor: pointer;
-  transition: background 0.1s, transform 0.12s;
+  transition: background 0.1s, transform 0.15s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.15s;
   border: calc(4 * var(--wu)) solid #fff;
   background: var(--thumb-color, #666);
   margin: 0;
+  opacity: 0.85; /* Slightly dim by default */
 }
 .sliders-double .big-slider::-webkit-slider-thumb { width: calc(28 * var(--wu)); height: calc(28 * var(--wu)); }
+
+/* Glassy effect for non-brightness sliders */
+.big-slider:not(.track-bri)::-webkit-slider-thumb {
+  background: color-mix(in srgb, var(--thumb-color, #666), transparent 60%);
+  backdrop-filter: blur(calc(6 * var(--wu)));
+  -webkit-backdrop-filter: blur(calc(6 * var(--wu)));
+  border: calc(1.5 * var(--wu)) solid rgba(255, 255, 255, 0.5);
+}
 
 /* In BRI mode, hide thumb — badge acts as indicator */
 .big-slider.track-bri::-webkit-slider-thumb { opacity: 0; }
 
-.big-slider:active::-webkit-slider-thumb { transform: scale(1.12); }
+.big-slider:active::-webkit-slider-thumb { 
+  transform: scale(1.25); /* Bigger on touch */
+  opacity: 1;            /* Full opacity on touch */
+}
+.big-slider:active {
+  z-index: 10;
+}
+
+.big-slider:active::-webkit-slider-thumb { transform: scale(1.25); }
 .big-slider:disabled { opacity: 0.15; pointer-events: none; }
 
 /* ── Floating percentage badge (BRI mode only) ── */
@@ -260,9 +315,17 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 2;
+  z-index: 15; /* Ensure it stays above the slider (z-index 10) */
   box-shadow: 0 calc(2 * var(--wu)) calc(10 * var(--wu)) rgba(0,0,0,0.4);
   letter-spacing: calc(-0.3 * var(--wu));
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1), background 0.15s, box-shadow 0.15s;
+}
+
+/* Make badge react when the slider is being touched */
+.slider-track-wrap:has(.big-slider:active) .slider-badge {
+  transform: translate(-50%, -50%) scale(1.25);
+  background: #fff;
+  box-shadow: 0 calc(4 * var(--wu)) calc(20 * var(--wu)) rgba(0,0,0,0.6);
 }
 
 /* ── Mode buttons ── */
@@ -325,9 +388,12 @@
   width: calc(30 * var(--wu));
   height: calc(30 * var(--wu));
   border-radius: 50%;
-  background: #444;
+  background: rgba(100, 100, 100, 0.4);
+  backdrop-filter: blur(calc(6 * var(--wu)));
+  -webkit-backdrop-filter: blur(calc(6 * var(--wu)));
+  border: calc(1 * var(--wu)) solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 calc(1.5 * var(--wu)) calc(5 * var(--wu)) rgba(0,0,0,0.55);
-  transition: left 0.25s, background 0.25s;
+  transition: left 0.25s, background 0.25s, border-color 0.25s;
 }
 
 .ios-toggle input:checked + .ios-track {
@@ -336,5 +402,6 @@
 }
 .ios-toggle input:checked + .ios-track .ios-knob {
   left: calc(37 * var(--wu));
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
 }

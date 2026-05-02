@@ -1,0 +1,7 @@
+{
+  "name": "news",
+  "label": "News",
+  "wsType": "news",
+  "containerAttrs": {},
+  "settingsOrder": 30
+}
