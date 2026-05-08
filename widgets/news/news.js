@@ -6,6 +6,7 @@ class NewsWidget {
     this._articleData  = [];
     this._lastData     = null;
     this._lastMode     = null;
+    this._popupFontSize = 15;
 
     new ResizeObserver(() => {
       if (!this._lastData) return;
@@ -16,15 +17,12 @@ class NewsWidget {
 
   _getMode() {
     const h = this.el.clientHeight;
-    const w = this.el.clientWidth;
-    if (w >= 600 && h < 180) return 'wide';
-    if (h >= 480) return 'article';
-    if (h >= 180) return 'stack';
-    return 'ticker';
+    const twoRows = window.innerHeight / 12; // 2 of 24 grid rows
+    return h <= twoRows ? 'wide' : 'article';
   }
 
   _isRTL(text) {
-    const rtlChars = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+    const rtlChars = /[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
     return rtlChars.test(text);
   }
 
@@ -40,10 +38,8 @@ class NewsWidget {
     const mode = this._getMode();
     this._lastMode = mode;
 
-    if (mode === 'wide')       this._renderWide(headlines);
-    else if (mode === 'article')    this._renderArticle(headlines);
-    else if (mode === 'stack') this._renderStack(headlines);
-    else                       this._renderTicker(headlines);
+    if (mode === 'article') this._renderArticle(headlines);
+    else this._renderWide(headlines);
   }
 
   _formatDate(dateStr) {
@@ -55,12 +51,12 @@ class NewsWidget {
     });
   }
 
-  // ── Wide mode (Full width, short height, infinite horizontal crawl) ────────
+  // ── Wide mode ────────────────────────────────────────────────────────────────
   _renderWide(headlines) {
-    const items = headlines.map(h => {
+    const items = headlines.map((h, i) => {
       const src = h.source ? `<span class="news-wide-src">${this._esc(h.source)}</span>` : '';
       return `
-        <div class="news-wide-item">
+        <div class="news-wide-item" data-idx="${i}">
           ${src}
           <span class="news-wide-title">${this._esc(h.title)}</span>
         </div>`;
@@ -76,68 +72,30 @@ class NewsWidget {
     requestAnimationFrame(() => {
       const track = document.getElementById('news-wide-track');
       if (!track) return;
-      // Adjust speed based on content length (pixels per second)
-      const duration = Math.max(30, track.scrollWidth / 2 / 120);
-      track.style.animationDuration = `${duration}s`;
+      track.style.animationDuration = `${Math.max(30, track.scrollWidth / 2 / 120)}s`;
+    });
+
+    document.getElementById('news-wide-track').addEventListener('click', e => {
+      const item = e.target.closest('.news-wide-item');
+      if (!item) return;
+      const idx = parseInt(item.dataset.idx, 10);
+      if (!isNaN(idx)) this._openPopup(headlines, idx);
     });
   }
 
-  // ── Ticker mode (thin strip) ─────────────────────────────────────────────────
-  _renderTicker(headlines) {
-    const items = headlines.map(h => {
-      const src = h.source ? `<span class="news-src">${this._esc(h.source)}</span>` : '';
-      return `<span class="news-item">${src}<span class="news-title">${this._esc(h.title)}</span></span><span class="news-dot">·</span>`;
-    }).join('');
-    this.el.innerHTML = `
-      <div class="news-ticker-wrap">
-        <div class="news-label">NEWS</div>
-        <div class="news-track-outer">
-          <div class="news-track" id="news-track">${items}${items}</div>
-        </div>
-      </div>`;
-    requestAnimationFrame(() => {
-      const track = document.getElementById('news-track');
-      if (!track) return;
-      track.style.animationDuration = `${Math.max(20, track.scrollWidth / 2 / 80)}s`;
-    });
-  }
-
-  // ── Stack mode (2 articles visible, auto-scrolling) ──────
-  _renderStack(headlines) {
-    this.el.innerHTML = `
-      <div class="news-stack-outer">
-        <div class="news-stack">
-          ${headlines.map(h => `
-            <div class="news-stack-item">
-              ${h.source ? `<span class="news-src">${this._esc(h.source)}</span>` : ''}
-              <span class="news-stack-title">${this._esc(h.title)}</span>
-            </div>`).join('')}
-        </div>
-      </div>`;
-
-    const outer = this.el.querySelector('.news-stack-outer');
-    if (!outer) return;
-
-    let idx = 0;
-    const advance = () => {
-      idx = (idx + 1) % headlines.length;
-      const itemH = outer.clientHeight / 2;
-      outer.scrollTo({ top: idx * itemH, behavior: 'smooth' });
-    };
-    this._articleTimer = setInterval(advance, 12000);
-  }
-
-  // ── Single-article mode (title + desc, 30s rotate) ──────────────────────────
+  // ── Article mode ──────────────────────────────────────────────────────────────
   _renderArticle(headlines) {
     this._articleData = headlines;
     this._articleIdx  = 0;
     this.el.innerHTML = `
       <div class="news-article-card" id="news-article">
-        <div class="news-article-src" id="na-src"></div>
+        <div class="news-article-header">
+          <div class="news-article-src"  id="na-src"></div>
+          <div class="news-article-date" id="na-date"></div>
+        </div>
         <div class="news-article-title" id="na-title"></div>
         <div class="news-article-desc"  id="na-desc"></div>
         <div class="news-article-dots"  id="na-dots"></div>
-        <div class="news-article-date"  id="na-date"></div>
       </div>`;
     this._showArticle(0);
 
@@ -155,7 +113,10 @@ class NewsWidget {
     card.addEventListener('pointerdown', e => { startX = e.clientX; card.setPointerCapture(e.pointerId); });
     card.addEventListener('pointerup', e => {
       const dx = e.clientX - startX;
-      if (Math.abs(dx) < 40) return;
+      if (Math.abs(dx) < 40) {
+        this._openPopup(this._articleData, this._articleIdx);
+        return;
+      }
       const n = headlines.length;
       this._articleIdx = (this._articleIdx + (dx < 0 ? 1 : -1) + n) % n;
       this._showArticle(this._articleIdx);
@@ -173,18 +134,178 @@ class NewsWidget {
       document.getElementById('na-src').textContent   = h.source || '';
       document.getElementById('na-title').textContent = h.title  || '';
       document.getElementById('na-desc').textContent  = h.desc   || '';
-      
       const dateEl = document.getElementById('na-date');
-      if (dateEl && h.date) {
-        dateEl.textContent = this._formatDate(h.date);
-      }
-
+      if (dateEl) dateEl.textContent = h.date ? this._formatDate(h.date) : '';
       const n    = this._articleData.length;
       const dots = document.getElementById('na-dots');
       if (dots) dots.innerHTML = Array.from({length: n}, (_, i) =>
         `<span class="na-dot${i === idx ? ' active' : ''}"></span>`).join('');
       card.style.opacity = '1';
     }, 500);
+  }
+
+  // ── Article popup reader ───────────────────────────────────────────────────────
+  _openPopup(headlines, startIdx) {
+    let idx = startIdx;
+    let fontSize = this._popupFontSize;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'news-popup-overlay';
+
+    const popupCard = document.createElement('div');
+    popupCard.className = 'news-popup-card';
+
+    const navEl = document.createElement('div');
+    navEl.className = 'news-popup-nav';
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'news-popup-nav-btn';
+    prevBtn.innerHTML = `<svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 1.5 2 8l6.5 6.5" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'news-popup-nav-btn';
+    nextBtn.innerHTML = `<svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 1.5 8 8l-6.5 6.5" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    navEl.append(nextBtn, prevBtn);
+    popupCard.appendChild(navEl);
+
+    // Scrollable content
+    const content = document.createElement('div');
+    content.className = 'news-popup-content';
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'news-popup-img';
+    const img = document.createElement('img');
+    img.alt = '';
+    imgWrap.appendChild(img);
+    content.appendChild(imgWrap);
+
+    const body = document.createElement('div');
+    body.className = 'news-popup-body';
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'news-popup-header';
+    const srcEl  = document.createElement('div');
+    srcEl.className  = 'news-popup-src';
+    const dateEl = document.createElement('div');
+    dateEl.className = 'news-popup-date';
+    headerRow.append(srcEl, dateEl);
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'news-popup-title';
+
+    const descEl = document.createElement('div');
+    descEl.className = 'news-popup-desc';
+
+    body.append(headerRow, titleEl, descEl);
+    content.appendChild(body);
+
+    // Footer: dots + font size controls
+    const footer = document.createElement('div');
+    footer.className = 'news-popup-footer';
+
+    const dotsEl = document.createElement('div');
+    dotsEl.className = 'news-popup-dots';
+
+    const sizeCtrl = document.createElement('div');
+    sizeCtrl.className = 'news-popup-size';
+    const minusBtn = document.createElement('button');
+    minusBtn.className = 'news-popup-size-btn';
+    minusBtn.textContent = '−';
+    const plusBtn = document.createElement('button');
+    plusBtn.className = 'news-popup-size-btn';
+    plusBtn.textContent = '+';
+    sizeCtrl.append(minusBtn, plusBtn);
+
+    footer.append(dotsEl, sizeCtrl);
+    popupCard.append(content, footer);
+    overlay.appendChild(popupCard);
+    document.body.appendChild(overlay);
+
+    const applyFontSize = () => {
+      body.style.setProperty('--popup-fs', `${fontSize}px`);
+    };
+
+    const showArticle = (i) => {
+      const a = headlines[i];
+      const isRtl = this._isRTL(a.title || '');
+      popupCard.dir = isRtl ? 'rtl' : 'ltr';
+      popupCard.classList.toggle('rtl', isRtl);
+
+      if (a.urlToImage) {
+        img.src = a.urlToImage;
+        img.onerror = () => { imgWrap.style.display = 'none'; };
+        imgWrap.style.display = '';
+      } else {
+        imgWrap.style.display = 'none';
+      }
+
+      srcEl.textContent  = a.source || '';
+      dateEl.textContent = a.date ? this._formatDate(a.date) : '';
+      titleEl.textContent = a.title || '';
+
+      const bodyText = (a.content && a.content.length > (a.desc || '').length)
+        ? a.content : (a.desc || '');
+      descEl.textContent = bodyText;
+
+      dotsEl.innerHTML = headlines.map((_, j) =>
+        `<span class="news-popup-dot${j === i ? ' active' : ''}"></span>`
+      ).join('');
+
+      content.scrollTop = 0;
+    };
+
+    showArticle(idx);
+    applyFontSize();
+    requestAnimationFrame(() => overlay.classList.add('news-popup-in'));
+
+    // Swipe left/right to navigate between articles
+    let touchStartX = 0, touchStartY = 0;
+    popupCard.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    popupCard.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+        idx = (idx + (dx < 0 ? 1 : -1) + headlines.length) % headlines.length;
+        showArticle(idx);
+      }
+    }, { passive: true });
+
+    // Article navigation buttons
+    prevBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      idx = (idx + 1) % headlines.length;
+      showArticle(idx);
+    });
+    nextBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      idx = (idx - 1 + headlines.length) % headlines.length;
+      showArticle(idx);
+    });
+
+    // Font size controls
+    minusBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      fontSize = Math.max(11, fontSize - 2);
+      this._popupFontSize = fontSize;
+      applyFontSize();
+    });
+    plusBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      fontSize = Math.min(28, fontSize + 2);
+      this._popupFontSize = fontSize;
+      applyFontSize();
+    });
+
+    // Close on backdrop tap or Escape
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    const close = () => {
+      overlay.classList.remove('news-popup-in');
+      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+      document.removeEventListener('keydown', onKey);
+    };
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
   }
 
   _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

@@ -62,10 +62,22 @@ class NewsService:
                     })
             r.raise_for_status()
             articles = r.json().get("articles", [])
+            def _clean_content(s):
+                s = (s or "").strip()
+                # NewsAPI free tier appends "[+NNN chars]" — strip it
+                import re as _re
+                return _re.sub(r'\s*\[\+\d+ chars\]$', '', s)
+
             headlines = [
-                {"title": a["title"], "source": a.get("source", {}).get("name", ""),
-                 "desc": (a.get("description") or "").strip(),
-                 "date": a.get("publishedAt")}
+                {
+                    "title": a["title"],
+                    "source": a.get("source", {}).get("name", ""),
+                    "desc": _clean_content(a.get("description")),
+                    "content": _clean_content(a.get("content")),
+                    "date": a.get("publishedAt"),
+                    "url": a.get("url") or "",
+                    "urlToImage": a.get("urlToImage") or "",
+                }
                 for a in articles if a.get("title") and a["title"] != "[Removed]"
             ]
             self._cache = {"headlines": headlines, "country": country}
