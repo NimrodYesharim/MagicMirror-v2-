@@ -7,3 +7,4 @@ google-auth-oauthlib>=1.2.0
 google-api-python-client>=2.128.0
 langdetect>=1.0.9
 python-multipart>=0.0.9
+qrcode>=7.4.2

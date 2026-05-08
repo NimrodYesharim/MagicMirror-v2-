@@ -350,6 +350,7 @@ function generalSection() {
     ${groupWrap('Display & Mirror', `
       ${field('Screen Width (px)', 'display.screen.width', s.width ?? 1080, 'number')}
       ${field('Screen Height (px)', 'display.screen.height', s.height ?? 1920, 'number')}
+      ${checkField('Show Cursor', 'display.show_cursor', d.show_cursor === true)}
       ${checkField('Show Sleep Button', 'display.sleep_button', d.sleep_button !== false)}
       ${checkField('Show Ring Light Button', 'display.ring_light_button', d.ring_light_button !== false)}
       ${selectField('Graphics Quality', 'display.graphics', d.graphics || 'high', [
@@ -725,20 +726,61 @@ async function _loadSystemSection(inner) {
           <div class="toggle-row" style="cursor:default"><span>Uptime</span><span style="color:#fff;font-weight:600">${esc(d.uptime)}</span></div>
           <div class="toggle-row" style="cursor:default"><span>Port</span><span style="color:#fff;font-weight:600">${esc(String(d.port))}</span></div>
         `)}
-        ${groupWrap('iPhone / HTTPS Trust', `
+        ${groupWrap('iPhone Setup', (() => {
+          const certUrl    = `http://${esc(d.ip)}:${esc(String(d.http_port || 8080))}/cert.crt`;
+          const controlUrl = `https://${esc(d.ip)}:${esc(String(d.control_port || 8001))}`;
+          const qr = url => `<div class="qr-setup-box"><img class="qr-setup-img" src="/api/qr?url=${encodeURIComponent(url)}" alt="QR code" loading="lazy"></div>`;
+          return `
           <div class="field">
-            <label>Install Certificate on iPhone</label>
-            <div style="background:#111;border-radius:10px;padding:14px 16px;font-family:monospace;font-size:15px;color:#4cd964;word-break:break-all">
-              https://${esc(d.ip)}:${esc(String(d.port))}/cert.crt
-            </div>
-            <span class="hint">Open this URL in Safari on your iPhone → "Profile Downloaded" → Install → Settings → General → About → Certificate Trust Settings → enable MagicMirror.</span>
+            <ul class="setup-step-list">
+              <li class="setup-step">
+                <div class="setup-step-head">
+                  <span class="setup-step-num">1</span>
+                  <span class="setup-step-text">In <strong>Settings → Safari</strong>, turn off <em>"No secure connection warning"</em>.</span>
+                </div>
+              </li>
+              <li class="setup-step">
+                <div class="setup-step-head">
+                  <span class="setup-step-num">2</span>
+                  <span class="setup-step-text">Scan the QR or open the URL in <strong>Safari</strong> to download &amp; install the certificate.</span>
+                </div>
+                ${qr(certUrl)}
+                <div style="background:#111;border-radius:10px;padding:12px 14px;font-family:monospace;font-size:13px;color:#4cd964;word-break:break-all">${certUrl}</div>
+                <span class="hint">After opening: <strong>Settings → General → VPN &amp; Device Management</strong> → tap <em>MagicMirror</em> → <strong>Install</strong>.</span>
+              </li>
+              <li class="setup-step">
+                <div class="setup-step-head">
+                  <span class="setup-step-num">3</span>
+                  <span class="setup-step-text">Go to <strong>Settings → General → About → Certificate Trust Settings</strong> and enable <em>MagicMirror</em>.</span>
+                </div>
+              </li>
+              <li class="setup-step">
+                <div class="setup-step-head">
+                  <span class="setup-step-num">4</span>
+                  <span class="setup-step-text">Scan the QR or open the control panel URL in Safari, then tap <strong>Share → Add to Home Screen</strong>.</span>
+                </div>
+                ${qr(controlUrl)}
+                <div style="background:#111;border-radius:10px;padding:12px 14px;font-family:monospace;font-size:13px;color:#4cd964;word-break:break-all">${controlUrl}</div>
+              </li>
+            </ul>
           </div>
-        `)}
+          `;
+        })())}
         ${groupWrap('Mirror Actions', `
           <div class="field">
             <label>Hard Reload</label>
             <button id="btn-hard-reload" class="secondary-btn">Force Reload Mirror (bypass cache)</button>
             <span class="hint">Clears widget data and re-fetches all assets on the mirror display.</span>
+          </div>
+          <div class="field">
+            <label>End Mirror Process</label>
+            <button id="btn-end-process" class="secondary-btn" style="color:#FF9F0A;border-color:#FF9F0A55">End Process</button>
+            <span class="hint">Exits the server process. The mirror display will go offline.</span>
+          </div>
+          <div class="field">
+            <label>Shut Down Pi</label>
+            <button id="btn-shutdown" class="secondary-btn" style="color:#FF453A;border-color:#FF453A55">Shut Down</button>
+            <span class="hint">Powers off the Raspberry Pi. Requires physical power-on to restart.</span>
           </div>
         `)}
       </div>`;
@@ -746,6 +788,16 @@ async function _loadSystemSection(inner) {
       await fetch('/api/refresh', { method: 'POST' });
       await fetch('/api/hard-reload', { method: 'POST' });
       showToast('Hard reload sent to mirror');
+    });
+    document.getElementById('btn-end-process')?.addEventListener('click', async () => {
+      if (!confirm('End the mirror server process? The display will go offline.')) return;
+      showToast('Ending process…');
+      try { await fetch('/api/reboot', { method: 'POST' }); } catch {}
+    });
+    document.getElementById('btn-shutdown')?.addEventListener('click', async () => {
+      if (!confirm('Shut down the Raspberry Pi? You will need to physically power it back on.')) return;
+      showToast('Shutting down…');
+      try { await fetch('/api/shutdown', { method: 'POST' }); } catch {}
     });
   } catch (e) {
     inner.innerHTML = `<div class="loading">Error: ${esc(e.message)}</div>`;

@@ -249,10 +249,10 @@ document.getElementById('btn-hard-reload').addEventListener('click', async () =>
 });
 
 document.getElementById('btn-reboot').addEventListener('click', async () => {
-  const ok = await confirm('Restart Server?', 'The server process will exit and restart.', 'Restart');
+  const ok = await confirm('End Mirror Process?', 'The server process will exit. The mirror display will go offline.', 'End Process');
   if (ok) {
-    showToast('Restarting…');
-    doAction('/api/reboot', 'POST', 'Restarting server…');
+    showToast('Ending process…');
+    doAction('/api/reboot', 'POST', 'Ending mirror process…');
   }
 });
 
@@ -983,31 +983,50 @@ function renderRedalertSettings(body, cfg) {
 }
 
 function renderSetupSection(body) {
-  const d   = _sysInfo;
-  const url = d.ip ? `https://${d.ip}:${d.port || 8000}/cert.crt` : '—';
+  const d          = _sysInfo;
+  const certUrl    = d.ip ? `http://${d.ip}:${d.http_port || 8080}/cert.crt` : null;
+  const controlUrl = d.ip ? `https://${d.ip}:${d.control_port || 8001}` : null;
+
+  function qrBlock(url) {
+    if (!url) return '';
+    return `<div class="qr-box"><img src="/api/qr?url=${encodeURIComponent(url)}" alt="QR code" class="qr-img" loading="lazy"></div>`;
+  }
+
   body.innerHTML = `
-    <div class="sec-header" style="margin-top:4px">Certificate URL</div>
-    <div class="cert-url-box" id="cert-url-display">${esc(url)}</div>
-    <div style="padding:12px 16px 0">
-      <button id="btn-copy-cert" style="
-        width:100%; padding:14px; border-radius:12px;
-        background:var(--blue); color:#fff;
-        font-size:16px; font-weight:600; cursor:pointer;
-        border:none; transition:opacity 0.15s;
-      ">Copy URL</button>
-    </div>
-    <div class="sec-header">iPhone Trust Steps</div>
+    <div class="sec-header" style="margin-top:4px">iPhone Setup</div>
     <div class="card">
       <ul class="step-list">
-        <li><span class="step-num">1</span><span>Open the Certificate URL in <strong>Safari</strong> and tap <strong>Allow</strong>.</span></li>
-        <li><span class="step-num">2</span><span>Go to <strong>Settings → General → VPN & Device Management</strong>, tap <em>MagicMirror</em> → <strong>Install</strong>.</span></li>
-        <li><span class="step-num">3</span><span>Go to <strong>Settings → General → About → Certificate Trust Settings</strong> and enable <em>MagicMirror</em>.</span></li>
-        <li><span class="step-num">4</span><span>Return to Safari and open the mirror URL — no more warnings.</span></li>
+        <li>
+          <span class="step-num">1</span>
+          <span>In <strong>Settings → Safari</strong>, turn off <em>"No secure connection warning"</em>.</span>
+        </li>
+        <li style="flex-direction:column;align-items:stretch;gap:8px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span class="step-num">2</span>
+            <span>Scan the QR or open the URL in <strong>Safari</strong> to download &amp; install the certificate.</span>
+          </div>
+          ${qrBlock(certUrl)}
+          <div class="cert-url-box" id="cert-url-display">${certUrl ? esc(certUrl) : '—'}</div>
+          <button id="btn-copy-cert" style="width:100%;padding:12px;border-radius:10px;background:var(--blue);color:#fff;font-size:15px;font-weight:600;cursor:pointer;border:none;">Copy URL</button>
+          <div style="font-size:13px;color:var(--label3);padding:0 2px">Then: <strong>Settings → General → VPN &amp; Device Management</strong> → tap <em>MagicMirror</em> → <strong>Install</strong>.</div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <span>Go to <strong>Settings → General → About → Certificate Trust Settings</strong> and enable <em>MagicMirror</em>.</span>
+        </li>
+        <li style="flex-direction:column;align-items:stretch;gap:8px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <span class="step-num">4</span>
+            <span>Scan the QR or open the control panel URL, then tap <strong>Share → Add to Home Screen</strong>.</span>
+          </div>
+          ${qrBlock(controlUrl)}
+          <div class="cert-url-box">${controlUrl ? esc(controlUrl) : '—'}</div>
+        </li>
       </ul>
     </div>
   `;
   body.querySelector('#btn-copy-cert')?.addEventListener('click', () => {
-    navigator.clipboard?.writeText(url).catch(() => {});
+    navigator.clipboard?.writeText(certUrl || '').catch(() => {});
     showToast('Copied!');
   });
 }

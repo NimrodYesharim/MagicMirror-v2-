@@ -6,7 +6,9 @@ import pkgutil
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Query
+from fastapi.responses import Response as _Response
+import io as _io
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -277,6 +279,8 @@ import logging
 # ── Log capturing for WebSocket dashboard ────────────────────────────────────
 class WSLogHandler(logging.Handler):
     def emit(self, record):
+        if record.levelno < logging.WARNING:
+            return  # Don't spam mirror browser with INFO-level access logs
         try:
             msg = self.format(record)
             loop = asyncio.get_event_loop()
@@ -308,7 +312,18 @@ async def system_info():
     uptime = f"{uptime_s // 3600}h {(uptime_s % 3600) // 60}m {uptime_s % 60}s"
     display = yaml.safe_load(Path("config/display.yaml").read_text(encoding="utf-8")) or {}
     return {"ip": ip, "uptime": uptime, "port": display.get("port", 8000),
+            "http_port": display.get("http_port", 8080),
+            "control_port": display.get("control_port", 8001),
             "started": _start_time}
+
+@app.get("/api/qr")
+async def generate_qr(url: str = Query(...)):
+    import qrcode, qrcode.image.svg
+    factory = qrcode.image.svg.SvgPathImage
+    img = qrcode.make(url, image_factory=factory, border=1)
+    buf = _io.BytesIO()
+    img.save(buf)
+    return _Response(content=buf.getvalue(), media_type="image/svg+xml")
 
 @app.post("/api/hard-reload")
 async def hard_reload():
@@ -664,6 +679,10 @@ async def _ctrl_hue_delete_zone(zone_id: str, request: Request):
 @_control_app.get("/api/system/info")
 async def _ctrl_system_info():
     return await system_info()
+
+@_control_app.get("/api/qr")
+async def _ctrl_generate_qr(url: str = Query(...)):
+    return await generate_qr(url)
 
 _control_app.mount("/widgets", StaticFiles(directory="widgets"), name="ctrl-widgets")
 _control_app.mount("/icons/weather", StaticFiles(directory="widgets/weather/weather_icons/icons"), name="ctrl-wi")

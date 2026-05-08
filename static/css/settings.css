@@ -226,6 +226,21 @@ img { -webkit-user-drag: none; }
 
 .hint { font-size: 13px; color: var(--muted); line-height: 1.45; }
 
+/* ── QR code ── */
+.qr-setup-box { display: flex; justify-content: center; padding: 8px 0; }
+.qr-setup-img { width: 168px; height: 168px; border-radius: 14px; background: #fff; padding: 10px; display: block; }
+.setup-step-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; }
+.setup-step { display: flex; flex-direction: column; gap: 8px; }
+.setup-step-head { display: flex; align-items: flex-start; gap: 10px; }
+.setup-step-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.setup-step-text { font-size: 15px; color: var(--muted); line-height: 1.5; flex: 1; }
+
 /* ── Toggle row (checkbox) ── */
 .toggle-row {
   display: flex;
@@ -252,10 +267,15 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
-  min-height: 56px;
+  margin-bottom: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  min-height: 52px;
 }
+.cal-row:last-child { border-bottom: none; }
 .cal-row input[type="text"] { flex: 1; }
+.cal-row .cal-name { flex: 1; font-size: 16px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-row input[type="color"] { width: 48px; height: 44px; padding: 3px; border: 1.5px solid var(--border2); border-radius: 10px; background: var(--surface); cursor: pointer; flex-shrink: 0; }
 
 /* ── Buttons ── */
 .save-row {
