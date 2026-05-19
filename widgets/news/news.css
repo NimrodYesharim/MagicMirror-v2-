@@ -91,6 +91,15 @@
 }
 .news-article-card::-webkit-scrollbar { display: none; }
 
+.news-article-body {
+  display: flex;
+  flex-direction: column;
+  gap: calc(12 * var(--wu));
+  flex: 1;
+  min-height: 0;
+  transition: opacity 0.5s ease;
+}
+
 .news-article-header {
   display: flex;
   justify-content: space-between;

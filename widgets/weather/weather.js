@@ -71,17 +71,18 @@ class WeatherWidget {
 
     const forecastHTML = (forecast || []).map((day, i) => {
       const isToday = i === 0;
-      let barStyle, dotHTML = '';
+      const left = ((day.temp_min - allMin) / range) * 100;
+      const right = ((day.temp_max - allMin) / range) * 100;
+      const width = Math.max(5, right - left);
+      const color1 = getColor(day.temp_min), color2 = getColor(day.temp_max);
+      const barStyle = `left:${left}%; width:${width}%; background:linear-gradient(90deg, ${color1}, ${color2})`;
+      
+      let dotHTML = '';
       if (isToday) {
-        const color1 = getColor(day.temp_min), color2 = getColor(day.temp_max);
-        barStyle = `left:0%; width:100%; background:linear-gradient(90deg, ${color1}, ${color2})`;
-        dotHTML = `<div class="fcast-cur-dot" style="left:${(todayFraction * 100).toFixed(1)}%"></div>`;
-      } else {
-        const left = ((day.temp_min - allMin) / range) * 100;
-        const right = ((day.temp_max - allMin) / range) * 100;
-        const width = Math.max(5, right - left);
-        const color1 = getColor(day.temp_min), color2 = getColor(day.temp_max);
-        barStyle = `left:${left}%; width:${width}%; background:linear-gradient(90deg, ${color1}, ${color2})`;
+        const currentTemp = parseFloat(c.temp);
+        const clampedTemp = Math.max(allMin, Math.min(allMax, currentTemp));
+        const dotLeft = ((clampedTemp - allMin) / range) * 100;
+        dotHTML = `<div class="fcast-cur-dot" style="left:${dotLeft.toFixed(1)}%"></div>`;
       }
       return `
       <div class="fcast-row${isToday ? ' today' : ''}" data-idx="${i}">
@@ -926,28 +927,40 @@ class WeatherWidget {
     dot.style.display = 'none';
     svg.appendChild(dot);
 
-    const tipG = document.createElementNS(ns, 'g');
-    tipG.style.display = 'none';
-    const tipRect = document.createElementNS(ns, 'rect');
-    tipRect.setAttribute('rx', '7'); tipRect.setAttribute('ry', '7');
-    tipRect.setAttribute('fill', 'rgba(22,22,28,0.93)');
-    const tipVal  = document.createElementNS(ns, 'text');
-    const tipTime = document.createElementNS(ns, 'text');
-    [tipVal, tipTime].forEach(t => { t.setAttribute('text-anchor', 'middle'); t.setAttribute('font-family', 'inherit'); });
-    tipVal.setAttribute('font-size', '13'); tipVal.setAttribute('font-weight', '600'); tipVal.setAttribute('fill', '#fff');
-    tipTime.setAttribute('font-size', '11'); tipTime.setAttribute('fill', 'rgba(255,255,255,0.5)');
-    tipG.append(tipRect, tipVal, tipTime);
-    svg.appendChild(tipG);
+    wrap.style.position = 'relative';
+    
+    let htmlTip = wrap.querySelector('.wx-chart-html-tip');
+    if (!htmlTip) {
+      htmlTip = document.createElement('div');
+      htmlTip.className = 'wx-chart-html-tip';
+      htmlTip.style.cssText = `
+        position: absolute;
+        pointer-events: none;
+        transform: translate(-50%, -100%);
+        opacity: 0;
+        transition: opacity 0.2s, top 0.05s linear, left 0.05s linear;
+        z-index: 10;
+      `;
+      wrap.appendChild(htmlTip);
+    }
+    
+    const tipValHtml = document.createElement('div');
+    tipValHtml.style.cssText = 'font-size: 15px; font-weight: 600; font-family: SFPro, -apple-system, sans-serif; white-space: nowrap;';
+    const tipTimeHtml = document.createElement('div');
+    tipTimeHtml.style.cssText = 'font-size: 11px; color: rgba(255,255,255,0.6); font-family: SFPro, -apple-system, sans-serif; margin-top: 1px; white-space: nowrap;';
+    htmlTip.innerHTML = '';
+    htmlTip.append(tipValHtml, tipTimeHtml);
 
     const overlay = document.createElementNS(ns, 'rect');
     overlay.setAttribute('x', L); overlay.setAttribute('y', T);
     overlay.setAttribute('width', W - L - R); overlay.setAttribute('height', cH);
     overlay.setAttribute('fill', 'transparent');
-    overlay.style.touchAction = 'none';
+    overlay.style.touchAction = 'none'; // Prevents page scrolling when touching graph
     svg.appendChild(overlay);
 
     const show = (clientX) => {
       const rect   = svg.getBoundingClientRect();
+      const wrapRect = wrap.getBoundingClientRect();
       const svgX   = (clientX - rect.left) * (W / rect.width);
       const pt     = points.reduce((b, p) => Math.abs(p.svgX - svgX) < Math.abs(b.svgX - svgX) ? p : b);
       const valStr  = pt.formatVal(pt.val);
@@ -958,29 +971,45 @@ class WeatherWidget {
       dot.setAttribute('cx', pt.svgX); dot.setAttribute('cy', pt.svgY);
       dot.style.display = '';
 
-      const charW = 7.5;
-      const boxW  = Math.max(valStr.length, timeStr.length) * charW + 24;
-      const boxH  = 36;
-      let tx = pt.svgX - boxW / 2;
-      if (tx < L) tx = L;
-      if (tx + boxW > W - R) tx = W - R - boxW;
-      const ty = pt.svgY - boxH - 14 < T ? pt.svgY + 10 : pt.svgY - boxH - 14;
+      // Calculate DOM coordinates relative to wrap
+      const domX = (pt.svgX / W) * rect.width + (rect.left - wrapRect.left);
+      const domY = (pt.svgY / svgH) * rect.height + (rect.top - wrapRect.top);
 
-      tipRect.setAttribute('x', tx); tipRect.setAttribute('y', ty);
-      tipRect.setAttribute('width', boxW); tipRect.setAttribute('height', boxH);
-      tipVal.setAttribute('x', tx + boxW / 2);  tipVal.setAttribute('y', ty + 15);
-      tipTime.setAttribute('x', tx + boxW / 2); tipTime.setAttribute('y', ty + 28);
-      tipVal.textContent = valStr; tipTime.textContent = timeStr;
-      tipG.style.display = '';
+      htmlTip.style.left = `${domX}px`;
+      htmlTip.style.top  = `${domY - 14}px`;
+      
+      tipValHtml.textContent = valStr;
+      tipTimeHtml.textContent = timeStr;
+      htmlTip.style.opacity = '1';
+      htmlTip.classList.add('active');
     };
 
-    const hide = () => { cursor.style.display = 'none'; dot.style.display = 'none'; tipG.style.display = 'none'; };
+    const hide = () => { 
+      cursor.style.display = 'none'; 
+      dot.style.display = 'none'; 
+      htmlTip.style.opacity = '0'; 
+      htmlTip.classList.remove('active');
+    };
 
-    overlay.addEventListener('pointerdown', e => { overlay.setPointerCapture(e.pointerId); show(e.clientX); e.stopPropagation(); });
-    overlay.addEventListener('pointermove', e => { if (e.buttons) show(e.clientX); e.stopPropagation(); });
-    overlay.addEventListener('pointerup',   e => { hide(); e.stopPropagation(); });
-    overlay.addEventListener('pointerleave', hide);
-    overlay.addEventListener('pointercancel', hide);
+    let isScrubbing = false;
+    overlay.addEventListener('pointerdown', e => { 
+      isScrubbing = true;
+      overlay.setPointerCapture(e.pointerId); 
+      show(e.clientX); 
+      e.stopPropagation(); 
+    });
+    overlay.addEventListener('pointermove', e => { 
+      if (isScrubbing) show(e.clientX); 
+      e.stopPropagation(); 
+    });
+    const stopScrubbing = e => { 
+      isScrubbing = false; 
+      hide(); 
+      if (e) e.stopPropagation(); 
+    };
+    overlay.addEventListener('pointerup', stopScrubbing);
+    overlay.addEventListener('pointerleave', stopScrubbing);
+    overlay.addEventListener('pointercancel', stopScrubbing);
   }
 
   // ── Forecast (non-today) detail panel ─────────────────────────────────────

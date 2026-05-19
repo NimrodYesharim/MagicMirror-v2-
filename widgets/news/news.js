@@ -114,12 +114,14 @@ class NewsWidget {
     this._articleIdx  = 0;
     this.el.innerHTML = `
       <div class="news-article-card" id="news-article">
-        <div class="news-article-header">
-          <div class="news-article-src"  id="na-src"></div>
-          <div class="news-article-date" id="na-date"></div>
+        <div class="news-article-body" id="na-body">
+          <div class="news-article-header">
+            <div class="news-article-src"  id="na-src"></div>
+            <div class="news-article-date" id="na-date"></div>
+          </div>
+          <div class="news-article-title" id="na-title"></div>
+          <div class="news-article-desc"  id="na-desc"></div>
         </div>
-        <div class="news-article-title" id="na-title"></div>
-        <div class="news-article-desc"  id="na-desc"></div>
         <div class="news-article-dots"  id="na-dots"></div>
       </div>`;
     this._showArticle(0);
@@ -164,8 +166,11 @@ class NewsWidget {
   _showArticle(idx) {
     const card = document.getElementById('news-article');
     if (!card) return;
-    card.style.opacity    = '0';
-    card.style.transition = 'opacity 0.5s';
+    const body = document.getElementById('na-body');
+    if (body) {
+      body.style.opacity    = '0';
+      body.style.transition = 'opacity 0.5s';
+    }
     setTimeout(() => {
       const h = this._articleData[idx];
       const isRtl = this._isRTL(h.title || '');
@@ -181,7 +186,9 @@ class NewsWidget {
       const dots = document.getElementById('na-dots');
       if (dots) dots.innerHTML = Array.from({length: n}, (_, i) =>
         `<span class="na-dot${i === idx ? ' active' : ''}"></span>`).join('');
-      card.style.opacity = '1';
+      if (body) {
+        body.style.opacity = '1';
+      }
     }, 500);
   }
 
