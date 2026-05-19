@@ -76,6 +76,12 @@
     <span class="bar"></span>
   </button>
 
+  <script>
+    // Register Service Worker for offline caching + instant reload
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
   <script src="/js/ws.js"></script>
   <script>
     // Global registry for widget classes
@@ -85,19 +91,19 @@
     // Dynamically load widgets from manifest objects
     fetch('/api/widgets')
       .then(r => r.json())
-      .then(manifests => {
+      .then(async manifests => {
         window.widgetManifests = {};
         manifests.forEach(m => { window.widgetManifests[m.name] = m; });
         window.activeWidgets = manifests.map(m => m.name);
 
         const mirror = document.getElementById('mirror');
-        let loadedScripts = 0;
 
         if (manifests.length === 0) {
             loadMainApp();
             return;
         }
 
+        // Create containers + load CSS for all widgets (non-blocking)
         manifests.forEach(m => {
           const w = m.name;
 
@@ -111,20 +117,18 @@
           link.rel = 'stylesheet';
           link.href = `/widgets/${w}/${w}.css`;
           document.head.appendChild(link);
-
-          let script = document.createElement('script');
-          script.src = `/widgets/${w}/${w}.js`;
-          script.onload = () => {
-              loadedScripts++;
-              if (loadedScripts === manifests.length) loadMainApp();
-          };
-          script.onerror = () => {
-              console.error("Failed to load script for widget " + w);
-              loadedScripts++;
-              if (loadedScripts === manifests.length) loadMainApp();
-          };
-          document.body.appendChild(script);
         });
+
+        // Load ALL widget scripts in parallel
+        await Promise.all(manifests.map(m => new Promise(resolve => {
+          let script = document.createElement('script');
+          script.src = `/widgets/${m.name}/${m.name}.js`;
+          script.async = true;
+          script.onload = script.onerror = resolve;
+          document.body.appendChild(script);
+        })));
+
+        loadMainApp();
       })
       .catch(e => console.error("Error loading widgets:", e));
 

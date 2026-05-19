@@ -1,9 +1,10 @@
 #!/bin/bash
 # Generate a self-signed TLS certificate for LAN HTTPS access.
-# Run once on the Pi: bash generate_certs.sh
+# Run once on the Pi: bash scripts/generate_certs.sh
 # Then trust the cert in your browser (open https://<pi-ip>:<port>, accept warning).
 
 set -e
+cd "$(dirname "$0")/.."
 mkdir -p config/ssl
 
 # Detect Pi's LAN IP for the SAN field

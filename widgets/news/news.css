@@ -14,32 +14,27 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  display: flex;
-  align-items: center;
+  display: block;
+  white-space: nowrap;
   /* Soft edge-fade for a high-end feel */
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
 }
 
 @keyframes news-wide-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-@keyframes news-wide-scroll-rtl {
-  from { transform: translateX(0); }
-  to   { transform: translateX(50%); }
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
 }
 
 .news-wide-track {
   display: inline-flex;
+  height: 100%;
   align-items: center;
   white-space: nowrap;
+  vertical-align: middle;
+  width: max-content;
+  min-width: max-content; /* Force Blink engine to layout at full content width */
   animation: news-wide-scroll 60s linear infinite;
-}
-
-#widget-news.rtl .news-wide-track {
-  animation-name: news-wide-scroll-rtl;
 }
 
 .news-wide-item {
@@ -92,6 +87,7 @@
   gap: calc(12 * var(--wu));
   box-sizing: border-box;
   transition: opacity 0.5s;
+  touch-action: pan-y;
 }
 .news-article-card::-webkit-scrollbar { display: none; }
 

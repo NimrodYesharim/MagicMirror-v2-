@@ -1,10 +1,10 @@
 #!/bin/bash
 # MagicMirror startup script
-# Add to Pi autostart: ~/.config/lxsession/LXDE-pi/autostart
-#   @/home/pi/MagicMirror\(v2\)/start.sh
+# Located in scripts/ — resolves project root automatically.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$SCRIPT_DIR"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_DIR"
 
 LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 [ -z "$LAN_IP" ] && LAN_IP="127.0.0.1"
@@ -97,7 +97,12 @@ chromium-browser \
   --renderer-process-limit=1 \
   --disable-dev-shm-usage \
   --disable-background-networking \
-  --disable-features=TranslateUI,Translate \
+  --disable-features=TranslateUI,Translate,ScrollAnimations \
+  --disable-background-timer-throttling \
+  --disable-backgrounding-occluded-windows \
+  --disable-renderer-backgrounding \
+  --enable-features=CanvasOopRasterization \
+  --disable-lcd-text \
   \
   "https://localhost:$PORT"
 

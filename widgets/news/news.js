@@ -7,11 +7,14 @@ class NewsWidget {
     this._lastData     = null;
     this._lastMode     = null;
     this._popupFontSize = 15;
+    this._trackObserver = null;
 
     new ResizeObserver(() => {
       if (!this._lastData) return;
       const mode = this._getMode();
-      if (mode !== this._lastMode) this.render(this._lastData);
+      if (mode !== this._lastMode) {
+        this.render(this._lastData);
+      }
     }).observe(this.el);
   }
 
@@ -53,10 +56,19 @@ class NewsWidget {
 
   // ── Wide mode ────────────────────────────────────────────────────────────────
   _renderWide(headlines) {
-    const items = headlines.map((h, i) => {
+    if (!headlines || !headlines.length) return;
+
+    // Repeat short lists so we always have enough items to exceed viewport width
+    let displayHeadlines = [...headlines];
+    while (displayHeadlines.length < 8) {
+      displayHeadlines = displayHeadlines.concat(headlines);
+    }
+
+    const items = displayHeadlines.map((h, i) => {
       const src = h.source ? `<span class="news-wide-src">${this._esc(h.source)}</span>` : '';
+      const originalIdx = i % headlines.length;
       return `
-        <div class="news-wide-item" data-idx="${i}">
+        <div class="news-wide-item" data-idx="${originalIdx}">
           ${src}
           <span class="news-wide-title">${this._esc(h.title)}</span>
         </div>`;
@@ -65,22 +77,35 @@ class NewsWidget {
     this.el.innerHTML = `
       <div class="news-wide-outer">
         <div class="news-wide-track" id="news-wide-track">
-          ${items}<span class="news-wide-sep"></span>${items}
+          ${items}<span class="news-wide-sep"></span>${items}<span class="news-wide-sep"></span>
         </div>
       </div>`;
 
-    requestAnimationFrame(() => {
-      const track = document.getElementById('news-wide-track');
-      if (!track) return;
-      track.style.animationDuration = `${Math.max(30, track.scrollWidth / 2 / 120)}s`;
-    });
+    if (this._trackObserver) {
+      this._trackObserver.disconnect();
+      this._trackObserver = null;
+    }
 
-    document.getElementById('news-wide-track').addEventListener('click', e => {
-      const item = e.target.closest('.news-wide-item');
-      if (!item) return;
-      const idx = parseInt(item.dataset.idx, 10);
-      if (!isNaN(idx)) this._openPopup(headlines, idx);
-    });
+    const track = this.el.querySelector('#news-wide-track');
+    if (track) {
+      // Use ResizeObserver on the track itself to ensure correct duration calculation
+      // when container size adjusts, fonts load, or styles apply.
+      this._trackObserver = new ResizeObserver(() => {
+        const speed = 70; // 70 pixels per second constant speed
+        const scrollW = track.scrollWidth;
+        if (scrollW > 0) {
+          track.style.animationDuration = `${(scrollW / 2) / speed}s`;
+        }
+      });
+      this._trackObserver.observe(track);
+
+      track.addEventListener('click', e => {
+        const item = e.target.closest('.news-wide-item');
+        if (!item) return;
+        const idx = parseInt(item.dataset.idx, 10);
+        if (!isNaN(idx)) this._openPopup(headlines, idx);
+      });
+    }
   }
 
   // ── Article mode ──────────────────────────────────────────────────────────────
@@ -110,8 +135,15 @@ class NewsWidget {
 
     const card = document.getElementById('news-article');
     let startX = 0;
-    card.addEventListener('pointerdown', e => { startX = e.clientX; card.setPointerCapture(e.pointerId); });
-    card.addEventListener('pointerup', e => {
+    card.style.touchAction = 'pan-y'; // Prevent browser swipe gestures from interfering
+    
+    card.addEventListener('pointerdown', e => { 
+      startX = e.clientX; 
+      try { card.setPointerCapture(e.pointerId); } catch(err) {}
+    });
+    
+    const handleUp = e => {
+      try { card.releasePointerCapture(e.pointerId); } catch(err) {}
       const dx = e.clientX - startX;
       if (Math.abs(dx) < 40) {
         this._openPopup(this._articleData, this._articleIdx);
@@ -121,6 +153,11 @@ class NewsWidget {
       this._articleIdx = (this._articleIdx + (dx < 0 ? 1 : -1) + n) % n;
       this._showArticle(this._articleIdx);
       startTimer();
+    };
+    
+    card.addEventListener('pointerup', handleUp);
+    card.addEventListener('pointercancel', e => {
+      try { card.releasePointerCapture(e.pointerId); } catch(err) {}
     });
   }
 

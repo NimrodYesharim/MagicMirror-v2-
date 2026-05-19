@@ -225,6 +225,28 @@ class CalendarWidget {
     this._initMarquees();
   }
 
+  // Phase 3a: Differential update — patch text content if structure unchanged
+  update(data) {
+    const newEvents = data.events || [];
+    // If event list structure changed (different IDs or count), full re-render
+    const oldIds = this.events.map(e => e.id).join(',');
+    const newIds = newEvents.map(e => e.id).join(',');
+    if (oldIds !== newIds) {
+      this.render(data);
+      return;
+    }
+    // Structure same — patch mutable fields in-place
+    this.events = newEvents;
+    for (const e of newEvents) {
+      const row = this.el.querySelector(`.cal-event-row[data-id="${e.id}"]`);
+      if (!row) continue;
+      const titleEl = row.querySelector('.cal-title span');
+      if (titleEl) titleEl.textContent = e.title;
+      const timePart = row.querySelector('.cal-time-part');
+      if (timePart) timePart.textContent = e.all_day ? 'All Day' : this._timeRange(e.start, e.end);
+    }
+  }
+
   _initMarquees() {
     setTimeout(() => {
       // Batch all reads first, then all writes — avoids layout thrash per element

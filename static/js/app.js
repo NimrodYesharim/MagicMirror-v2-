@@ -15,7 +15,7 @@ if (widgets.datetime && typeof widgets.datetime.init === 'function') {
   widgets.datetime.init();
 }
 
-// ── Bootstrap: load config + widget data via REST, don't wait for WS ─────────
+// ── Bootstrap: use prefetched data when available, fall back to REST ─────────
 async function _tryFetchJson(url) {
   try {
     const r = await fetch(url);
@@ -24,30 +24,54 @@ async function _tryFetchJson(url) {
 }
 
 (async () => {
-  const promises = [
-    _tryFetchJson('/api/config/layout'),
-    _tryFetchJson('/api/config/display'),
-  ];
-  
-  // Dynamically fetch data for all active widgets that have a data endpoint
-  // Note: Some widgets like datetime don't need data from the backend.
-  window.activeWidgets.forEach(w => {
-    promises.push(_tryFetchJson(`/api/data/${w}`).then(data => ({ widget: w, data })));
-  });
+  // Phase 2a: Use server-injected config + widget data if available
+  const prefetchedConfig = window.__CONFIG__ || null;
+  const prefetchedData   = window.__PREFETCH__ || {};
 
-  const results = await Promise.all(promises);
-  const layout = results[0];
-  const display = results[1];
-  
+  let layout, display;
+
+  if (prefetchedConfig) {
+    layout  = prefetchedConfig.layout;
+    display = prefetchedConfig.display;
+  } else {
+    // Fallback to REST
+    const results = await Promise.all([
+      _tryFetchJson('/api/config/layout'),
+      _tryFetchJson('/api/config/display'),
+    ]);
+    layout  = results[0];
+    display = results[1];
+  }
+
   if (layout)  applyLayout(layout);
   if (display) applyDisplay(display);
   _reveal();
-  
-  for (let i = 2; i < results.length; i++) {
-    const { widget, data } = results[i];
-    if (data && widgets[widget] && typeof widgets[widget].render === 'function') {
-      widgets[widget].render(data);
-      widgets[widget]._rendered = true;
+
+  // Render widgets from prefetched data first, then fill gaps via REST
+  const restNeeded = [];
+  for (const w of window.activeWidgets) {
+    if (prefetchedData[w] && widgets[w] && typeof widgets[w].render === 'function') {
+      widgets[w].render(prefetchedData[w]);
+      widgets[w]._rendered = true;
+      widgets[w]._lastDataJson = JSON.stringify(prefetchedData[w]);
+    } else if (w !== 'datetime') {
+      restNeeded.push(w);
+    }
+  }
+
+  // Fetch any missing widget data via REST in parallel
+  if (restNeeded.length) {
+    const results = await Promise.all(
+      restNeeded.map(w => _tryFetchJson(`/api/data/${w}`).then(data => ({ widget: w, data })))
+    );
+    for (const { widget, data } of results) {
+      if (data && widgets[widget] && typeof widgets[widget].render === 'function') {
+        // Phase 4d: Skip render if widget is hidden in current layout
+        if (_isWidgetHidden(widget)) continue;
+        widgets[widget].render(data);
+        widgets[widget]._rendered = true;
+        widgets[widget]._lastDataJson = JSON.stringify(data);
+      }
     }
   }
 })();
@@ -92,8 +116,17 @@ function _applyTemplate(idx) {
     el.style.gridRow    = pos.row;
     el.style.gridColumn = pos.column;
     // Hide widget if positioned at 1/1 (sentinel for "hidden in this layout")
-    el.style.visibility = (pos.row === '1 / 1') ? 'hidden' : 'visible';
+    const hidden = (pos.row === '1 / 1');
+    el.style.visibility = hidden ? 'hidden' : 'visible';
   }
+}
+
+// Phase 4d: Check if a widget is hidden in the current layout template
+function _isWidgetHidden(name) {
+  const key = _templateKeys[_currentIdx];
+  const template = _layoutTemplates[key];
+  if (!template?.widgets?.[name]) return false;
+  return template.widgets[name].row === '1 / 1';
 }
 
 // ── Display config ─────────────────────────────────────────────────────────────
@@ -148,6 +181,18 @@ window.activeWidgets.forEach(w => {
   WS.on(wsType, data => {
     const widget = widgets[w];
     if (!widget) return;
+
+    // Phase 4d: Skip rendering for hidden widgets — store data for later
+    if (_isWidgetHidden(w)) {
+      widget._pendingData = data;
+      return;
+    }
+
+    // Phase 3a: Skip if data hasn't changed (avoids redundant DOM rebuilds)
+    const newJson = JSON.stringify(data);
+    if (widget._lastDataJson === newJson) return;
+    widget._lastDataJson = newJson;
+
     if (!widget._rendered) {
       if (typeof widget.render === 'function') {
         widget.render(data);
@@ -237,9 +282,25 @@ btnRefresh.addEventListener('click', async () => {
 document.getElementById('btn-layout').addEventListener('click', () => {
   _currentIdx = (_currentIdx + 1) % _templateKeys.length;
   _applyTemplate(_currentIdx);
+
+  // Phase 4d: Render any widgets that were hidden and now visible
+  for (const w of window.activeWidgets) {
+    const widget = widgets[w];
+    if (!widget || !widget._pendingData) continue;
+    if (!_isWidgetHidden(w)) {
+      if (typeof widget.render === 'function') {
+        widget.render(widget._pendingData);
+        widget._rendered = true;
+        widget._lastDataJson = JSON.stringify(widget._pendingData);
+      }
+      widget._pendingData = null;
+    }
+  }
 });
 
 // ── Widget scale (fonts, icons, padding) track grid cell size ─────────────────
+// Phase 3c: Debounced ResizeObserver — avoids rapid-fire --wu recalculations
+let _scaleRafId = null;
 function initWidgetScale() {
   const setWu = (el) => {
     const w = el.clientWidth;
@@ -249,7 +310,11 @@ function initWidgetScale() {
     el.style.setProperty('--wu', `${m / scale}px`);
   };
   const ro = new ResizeObserver(entries => {
-    for (const entry of entries) setWu(entry.target);
+    if (_scaleRafId) return; // Debounce: one rAF at a time
+    _scaleRafId = requestAnimationFrame(() => {
+      _scaleRafId = null;
+      for (const entry of entries) setWu(entry.target);
+    });
   });
   document.querySelectorAll('#mirror > .widget').forEach((el) => {
     setWu(el);

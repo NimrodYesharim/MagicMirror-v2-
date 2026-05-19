@@ -83,7 +83,7 @@ cp "Magic Mirror/Assets/fonts/"*.otf static/fonts/
 uvicorn server.main:app --reload --port 8000
 
 # Production (kiosk mode, HTTPS)
-bash start.sh
+bash scripts/start.sh
 ```
 
 ### Pi autostart
@@ -91,7 +91,7 @@ bash start.sh
 Add to `~/.config/lxsession/LXDE-pi/autostart`:
 
 ```
-@/home/pi/MagicMirror\(v2\)/start.sh
+@/home/pi/MagicMirror\(v2\)/scripts/start.sh
 ```
 
 ---
@@ -148,9 +148,17 @@ server/services/
   news.py               — NewsAPI headlines
   redalert.py           — Pikud HaOref live alerts
 
+scripts/
+  start.sh              — launch server + Chromium kiosk (Linux)
+  start.bat             — launch server + browser (Windows)
+  setup_pi.sh           — one-time Pi setup (autostart, HDMI, alias)
+  generate_certs.sh     — generate self-signed TLS certificate
+  build.sh              — concatenate CSS/JS into bundles
+
 static/
   index.html            — mirror shell
   control.html          — iPhone control panel
+  sw.js                 — Service Worker for offline caching
   js/app.js             — mirror: widget instances, REST bootstrap, WS dispatch
   js/ws.js              — WebSocket client with exponential-backoff reconnect
   js/control.js         — control panel logic (status, actions, logs)

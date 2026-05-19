@@ -24,6 +24,22 @@ _log_capture.setup()
 
 ws_manager = WSManager()
 
+# ── YAML config cache (Phase 2d) ─────────────────────────────────────────────
+_yaml_cache: dict[str, tuple[float, dict]] = {}
+
+def _read_yaml_cached(path: Path) -> dict:
+    """Read YAML with mtime-based cache. Avoids redundant disk reads."""
+    key = str(path)
+    try:
+        mtime = path.stat().st_mtime
+        if key in _yaml_cache and _yaml_cache[key][0] == mtime:
+            return _yaml_cache[key][1]
+        data = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+        _yaml_cache[key] = (mtime, data)
+        return data
+    except Exception:
+        return _yaml_cache.get(key, (0, {}))[1]
+
 
 async def _http_redirect_server():
     """Plain HTTP server: serves /cert.crt for install, redirects everything else to HTTPS."""
@@ -103,7 +119,27 @@ async def root():
 
 @app.get("/mirror")
 async def mirror_page():
-    return FileResponse('static/index.html')
+    # Phase 2a: Inject cached widget data into HTML to eliminate REST round-trips on boot
+    prefetch = {}
+    for name, svc in (getattr(app.state, 'widgets', None) or {}).items():
+        getter = getattr(svc, 'get_cached', None) or getattr(svc, 'get_cached_state', None)
+        if getter:
+            data = getter()
+            if data:
+                prefetch[name] = data
+    html = Path('static/index.html').read_text(encoding='utf-8')
+    if prefetch:
+        inject = f'<script>window.__PREFETCH__={_json.dumps(prefetch)}</script>'
+        html = html.replace('</head>', f'{inject}\n</head>')
+    # Also inject layout+display config
+    try:
+        layout = _read_yaml_cached(Path('config/layout.yaml'))
+        display = _read_yaml_cached(Path('config/display.yaml'))
+        cfg_inject = f'<script>window.__CONFIG__={_json.dumps({"layout": layout, "display": display})}</script>'
+        html = html.replace('</head>', f'{cfg_inject}\n</head>')
+    except Exception:
+        pass
+    return HTMLResponse(html)
 
 
 @app.get("/api/widgets")
@@ -141,8 +177,8 @@ async def list_widgets():
 async def ws_endpoint(ws: WebSocket):
     await ws_manager.connect(ws)
     try:
-        layout  = yaml.safe_load(Path("config/layout.yaml").read_text(encoding='utf-8'))
-        display = yaml.safe_load(Path("config/display.yaml").read_text(encoding='utf-8'))
+        layout  = _read_yaml_cached(Path("config/layout.yaml"))
+        display = _read_yaml_cached(Path("config/display.yaml"))
         await ws.send_json({"type": "config", "data": {"layout": layout, "display": display}})
 
         from server.log_capture import get_log_buffer
@@ -452,7 +488,7 @@ def _get_config_path(widget: str) -> Path:
 async def get_cert():
     cert = Path('config/ssl/cert.pem')
     if not cert.exists():
-        raise HTTPException(status_code=404, detail='No certificate found. Run start.sh first.')
+        raise HTTPException(status_code=404, detail='No certificate found. Run scripts/start.sh first.')
     return FileResponse(str(cert), media_type='application/x-x509-ca-cert',
                         filename='magicmirror.crt')
 
@@ -551,7 +587,7 @@ async def get_config(widget: str):
     path = _get_config_path(widget)
     if not path.exists():
         raise HTTPException(status_code=404, detail='Config not found')
-    return yaml.safe_load(_read_config_safe(path)) or {}
+    return _read_yaml_cached(path)
 
 @app.post('/api/config/{widget}')
 async def save_config(widget: str, request: Request):
@@ -578,8 +614,10 @@ async def save_config(widget: str, request: Request):
                 await ws_manager.broadcast({"type": widget, "data": data})
 
     if widget == 'layout' or widget == 'display':
-        layout  = yaml.safe_load(Path("config/layout.yaml").read_text(encoding='utf-8'))
-        display = yaml.safe_load(Path("config/display.yaml").read_text(encoding='utf-8'))
+        # Invalidate cache since we just wrote the file
+        _yaml_cache.pop(str(Path(f'config/{widget}.yaml')), None)
+        layout  = _read_yaml_cached(Path("config/layout.yaml"))
+        display = _read_yaml_cached(Path("config/display.yaml"))
         await ws_manager.broadcast({"type": "config", "data": {"layout": layout, "display": display}})
         
     return {'ok': True}

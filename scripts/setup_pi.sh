@@ -1,8 +1,10 @@
 #!/bin/bash
 # One-time Pi setup: autostart on boot + 4am daily reboot + desktop shortcut
-# Run once: bash setup_pi.sh
+# Run once: bash scripts/setup_pi.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+START_SCRIPT="$SCRIPT_DIR/start.sh"
 
 # ── 1. Autostart on boot ─────────────────────────────────────────────────────
 # Pi OS Bookworm switched from LXDE to Wayfire/labwc — the old LXDE-only
@@ -15,7 +17,7 @@ cat > "$XDG_AUTO_DIR/magicmirror.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=MagicMirror
-Exec=bash $SCRIPT_DIR/start.sh
+Exec=bash $START_SCRIPT
 X-GNOME-Autostart-enabled=true
 EOF
 echo "[autostart] XDG autostart entry created"
@@ -28,7 +30,7 @@ if [ -d "$LABWC_DIR" ] || command -v labwc &>/dev/null; then
   if grep -qF "start.sh" "$LABWC_FILE" 2>/dev/null; then
     echo "[autostart] labwc already configured — skipping."
   else
-    echo "bash $SCRIPT_DIR/start.sh &" >> "$LABWC_FILE"
+    echo "bash $START_SCRIPT &" >> "$LABWC_FILE"
     echo "[autostart] Added to labwc autostart"
   fi
 fi
@@ -41,7 +43,7 @@ if [ -d "$LXDE_DIR" ] || [ -d "/usr/share/lxsession" ]; then
   if grep -qF "start.sh" "$LXDE_FILE" 2>/dev/null; then
     echo "[autostart] LXDE already configured — skipping."
   else
-    echo "@$SCRIPT_DIR/start.sh" >> "$LXDE_FILE"
+    echo "@$START_SCRIPT" >> "$LXDE_FILE"
     echo "[autostart] Added to LXDE autostart"
   fi
 fi
@@ -65,7 +67,7 @@ Version=1.0
 Type=Application
 Name=MagicMirror
 Comment=Start MagicMirror kiosk
-Exec=$SCRIPT_DIR/start.sh
+Exec=$START_SCRIPT
 Terminal=false
 Categories=Utility;
 EOF
@@ -102,10 +104,26 @@ HDMI
   echo "[hdmi] Added HDMI force-hotplug settings to $BOOT_CFG"
 fi
 
+# ── 5b. Force HDMI output on KMS (Pi 4/5 Bookworm/Bullseye) ─────────────────
+CMD_LINE="/boot/firmware/cmdline.txt"
+[ ! -f "$CMD_LINE" ] && CMD_LINE="/boot/cmdline.txt"
+
+if [ -f "$CMD_LINE" ]; then
+  if grep -q "vc4.force_hotplug" "$CMD_LINE" 2>/dev/null; then
+    echo "[hdmi-kms] vc4.force_hotplug already set in $CMD_LINE — skipping."
+  else
+    # Append to the end of the first line without adding a new line
+    sudo sed -i '1 s/$/ vc4.force_hotplug=1 video=HDMI-A-1:1920x1080@60D video=HDMI-A-2:1920x1080@60D/' "$CMD_LINE"
+    echo "[hdmi-kms] Added vc4.force_hotplug and video modes to $CMD_LINE"
+  fi
+fi
+
 # ── 6. Shell alias: type "mirror" to start from any terminal ─────────────────
-ALIAS_LINE="alias mirror='bash $SCRIPT_DIR/start.sh'"
+ALIAS_LINE="alias mirror='bash \"$START_SCRIPT\"'"
 if grep -qF "alias mirror=" "$HOME/.bashrc" 2>/dev/null; then
-  echo "[alias] 'mirror' alias already in ~/.bashrc — skipping."
+  # Update existing alias to current path
+  sed -i "s|^alias mirror=.*|$ALIAS_LINE|" "$HOME/.bashrc"
+  echo "[alias] Updated 'mirror' alias in ~/.bashrc"
 else
   echo "" >> "$HOME/.bashrc"
   echo "# MagicMirror shortcut" >> "$HOME/.bashrc"

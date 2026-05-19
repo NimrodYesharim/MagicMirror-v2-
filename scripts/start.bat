@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0\.."
 title MagicMirror
 
 echo Starting MagicMirror server...
