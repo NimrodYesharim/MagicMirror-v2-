@@ -113,10 +113,16 @@ class WeatherService:
         for i, h in enumerate(resp.get("hourly", [])[:49]):
             dt_h = datetime.fromtimestamp(h["dt"], tz=local_tz)
             hourly.append({
-                "hour": "Now" if i == 0 else dt_h.strftime("%H"),
-                "icon": h["weather"][0]["icon"],
-                "temp": round(h["temp"]),
-                "uvi":  h.get("uvi", 0),
+                "hour":       "Now" if i == 0 else dt_h.strftime("%H"),
+                "icon":       h["weather"][0]["icon"],
+                "temp":       round(h["temp"]),
+                "feels_like": round(h.get("feels_like", h["temp"])),
+                "uvi":        h.get("uvi", 0),
+                "pop":        round(h.get("pop", 0) * 100),
+                "humidity":    h.get("humidity", 0),
+                "wind_speed":  round(h.get("wind_speed", 0), 1),
+                "visibility":  round(h.get("visibility", 10000) / 1000, 1),
+                "pressure":    h.get("pressure", 1013),
             })
 
         # Observed min/max tracking

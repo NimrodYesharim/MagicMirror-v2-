@@ -13,17 +13,80 @@ class CalendarWidget {
     let hasMoved = false;
     let targetRow = null;
     let touchX = 0, touchY = 0;
+    let snapRafId = null;
 
     const stop = () => { if (rafId) { cancelAnimationFrame(rafId); rafId = null; } };
+    const stopSnap = () => { if (snapRafId) { cancelAnimationFrame(snapRafId); snapRafId = null; } };
+
+    const updateDateCols = () => {
+      const containerTop = el.getBoundingClientRect().top;
+      el.querySelectorAll('.cal-day-group').forEach(g => {
+        const dateCol = g.querySelector('.cal-date-col');
+        if (!dateCol) return;
+        const gRect = g.getBoundingClientRect();
+        const scrolledPast = containerTop - gRect.top;
+
+        // Clear previous no-sep marker in this group
+        g.querySelectorAll('.cal-event-row.no-sep').forEach(r => r.classList.remove('no-sep'));
+
+        if (scrolledPast <= 0) { dateCol.style.transform = ''; return; }
+
+        // Max translation: date col center aligns with last event row center
+        const lastRow = g.querySelector('.cal-event-row:last-child');
+        let max;
+        if (lastRow) {
+          const lrRect = lastRow.getBoundingClientRect();
+          max = Math.max(0, (lrRect.top + lrRect.height / 2) - gRect.top - dateCol.offsetHeight / 2);
+        } else {
+          max = Math.max(0, gRect.height - dateCol.offsetHeight);
+        }
+
+        dateCol.style.transform = `translateY(${Math.min(scrolledPast, max)}px)`;
+
+        // Hide the top separator of the first event row at the widget's top edge
+        const rows = [...g.querySelectorAll('.cal-event-row')];
+        const firstVisible = rows.find(r => r.getBoundingClientRect().top >= containerTop - 1);
+        if (firstVisible) firstVisible.classList.add('no-sep');
+      });
+    };
+
+    const snapToRow = () => {
+      const containerTop = el.getBoundingClientRect().top;
+      const st = el.scrollTop;
+      const targets = [];
+      el.querySelectorAll('.cal-day-group').forEach(g => {
+        targets.push(st + g.getBoundingClientRect().top - containerTop);
+        g.querySelectorAll('.cal-event-row').forEach((row, i) => {
+          if (i === 0) return;
+          targets.push(st + row.getBoundingClientRect().top - containerTop);
+        });
+      });
+      if (!targets.length) return;
+      const target = targets.reduce((best, t) => Math.abs(t - st) < Math.abs(best - st) ? t : best, targets[0]);
+      if (Math.abs(target - st) < 1) return;
+      const from = st, delta = target - from;
+      const duration = Math.min(250, Math.abs(delta) * 0.8);
+      const t0 = performance.now();
+      const easeOut = t => 1 - (1 - t) ** 3;
+      const animate = now => {
+        const t = Math.min(1, (now - t0) / duration);
+        el.scrollTop = from + delta * easeOut(t);
+        updateDateCols();
+        snapRafId = t < 1 ? requestAnimationFrame(animate) : null;
+      };
+      snapRafId = requestAnimationFrame(animate);
+    };
+
     const coast = () => {
       velY *= 0.90;
       el.scrollTop -= velY * 16;
+      updateDateCols();
       if (Math.abs(velY) > 0.15) rafId = requestAnimationFrame(coast);
-      else rafId = null;
+      else { rafId = null; snapToRow(); }
     };
 
     el.addEventListener('pointerdown', e => {
-      stop();
+      stop(); stopSnap();
       active = true;
       hasMoved = false;
       targetRow = e.target.closest('.cal-event-row');
@@ -44,6 +107,7 @@ class CalendarWidget {
       velY = (lastY - e.clientY) / dt;
       lastY = e.clientY; lastT = now;
       el.scrollTop = scrollTop + (startY - e.clientY);
+      updateDateCols();
     });
 
     el.addEventListener('pointerup', e => {
@@ -58,13 +122,15 @@ class CalendarWidget {
         if (event) this._showEventDetail(event, touchX, touchY);
       } else if (Math.abs(velY) > 0.2) {
         rafId = requestAnimationFrame(coast);
+      } else {
+        snapToRow();
       }
       targetRow = null;
     });
 
-    el.addEventListener('pointercancel', e => { 
-      active = false; 
-      velY = 0; 
+    el.addEventListener('pointercancel', e => {
+      active = false;
+      velY = 0;
       el.releasePointerCapture(e.pointerId);
     });
   }
@@ -160,21 +226,23 @@ class CalendarWidget {
   }
 
   _initMarquees() {
-    // Wait for layout to settle before measuring widths
     setTimeout(() => {
+      // Batch all reads first, then all writes — avoids layout thrash per element
+      const overflows = [];
       this.el.querySelectorAll('.cal-title, .cal-loc-part').forEach(el => {
         const span = el.querySelector('span');
         if (!span) return;
         const diff = span.offsetWidth - el.offsetWidth;
-        if (diff > 0) {
-          const isRtl = el.classList.contains('rtl') || el.closest('.rtl');
-          el.classList.add('marquee');
-          const dur = Math.max(3, diff / 25); // Speed: 25px/s
-          span.style.setProperty('--dist', `-${diff}px`);
-          span.style.setProperty('--dur', `${dur}s`);
-          span.classList.add(isRtl ? 'animate-marquee-rtl' : 'animate-marquee-ltr');
-        }
+        if (diff > 0) overflows.push({ el, span, diff });
       });
+      for (const { el, span, diff } of overflows) {
+        const isRtl = el.classList.contains('rtl') || el.closest('.rtl');
+        const dur = Math.max(3, diff / 25);
+        el.classList.add('marquee');
+        span.style.setProperty('--dist', `-${diff}px`);
+        span.style.setProperty('--dur', `${dur}s`);
+        span.classList.add(isRtl ? 'animate-marquee-rtl' : 'animate-marquee-ltr');
+      }
     }, 120);
   }
 

@@ -66,10 +66,9 @@ async def register(app, ws_manager):
     ws_manager.register_state_provider("red_alert", lambda: None)
 
     async def _loop():
-        cfg = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8')) or {} if CONFIG_PATH.exists() else {}
-        interval = cfg.get("poll_interval", 3)
         while True:
-            await asyncio.sleep(interval)
+            cfg = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8')) or {} if CONFIG_PATH.exists() else {}
+            await asyncio.sleep(cfg.get("poll_interval", 3))
             try:
                 result = await service.poll()
                 if result is not None:

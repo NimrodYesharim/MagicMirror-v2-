@@ -288,14 +288,14 @@
 }
 
 .wx-modal-temp-item .label {
-  font-size: 14px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #666;
 }
 
 .wx-modal-temp-item .value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 600;
   color: #fff;
 }
@@ -317,6 +317,19 @@
   padding: 16px;
   background: rgba(255,255,255,0.03);
   border-radius: 16px;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.wx-modal-stat[data-metric] {
+  cursor: pointer;
+}
+.wx-modal-stat[data-metric]:active {
+  background: rgba(255,255,255,0.09);
+}
+.wx-modal-stat[data-metric].active {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
 }
 
 .wx-modal-stat .wx-ico {
@@ -331,13 +344,13 @@
 }
 
 .stat-info .label {
-  font-size: 13px;
+  font-size: 14px;
   color: #888;
   font-weight: 400;
 }
 
 .stat-info .value {
-  font-size: 18px;
+  font-size: 21px;
   color: #eee;
   font-weight: 600;
 }
@@ -384,3 +397,513 @@
   fill: #666;
   font-weight: 400;
 }
+
+/* ══════════════════════════════════════════════════════════
+   Today Detail Panel — iOS Weather-style modal
+   ══════════════════════════════════════════════════════════ */
+
+#modal-card.wx-today-card {
+  padding: 22px 28px 30px;
+  max-height: 95vh;
+  width: min(800px, 96vw);
+}
+
+/* Fix var(--wu) icon sizes to px inside the today card graph section */
+#modal-card.wx-today-card .wx-today-graph-section .ico-xs { width: 16px !important; height: 16px !important; }
+#modal-card.wx-today-card .wx-today-graph-section .ico-sm { width: 18px !important; height: 18px !important; }
+/* Stats grid icons */
+#modal-card.wx-today-card .wx-modal-grid .ico-xs { width: 18px !important; height: 18px !important; }
+
+.wx-today-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Top bar ── */
+.wx-td-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+}
+
+.wx-td-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.wx-td-close {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  border: none; cursor: pointer;
+  color: rgba(255,255,255,0.75);
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.wx-td-close:hover, .wx-td-close:active { background: rgba(255,255,255,0.24); }
+
+/* ── Calendar strip ── */
+.wx-td-calendar { margin-bottom: 2px; }
+
+.wx-cal-dow-row,
+.wx-cal-date-row {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  text-align: center;
+}
+
+.wx-cal-dow {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  font-weight: 500;
+  padding: 2px 0;
+  letter-spacing: 0.5px;
+}
+
+.wx-cal-date {
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.5);
+  padding: 5px 0;
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.wx-cal-date.today {
+  font-weight: 700;
+  color: #fff;
+}
+
+.wx-cal-date.today::before {
+  content: '';
+  position: absolute;
+  width: 32px; height: 32px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #007AFF;
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.wx-td-full-date {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.42);
+  margin: 4px 0 10px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Divider ── */
+.wx-td-div {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 2px 0 8px;
+}
+
+/* ── Current conditions row ── */
+.wx-td-cur {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 6px 0 4px;
+}
+
+.wx-td-cur-left { display: flex; flex-direction: column; gap: 2px; }
+
+.wx-td-cur-temp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wx-td-cur-temp {
+  font-size: 50px;
+  font-weight: 200;
+  color: #fff;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+
+.wx-td-hilo {
+  font-size: 14px;
+  color: rgba(255,255,255,0.48);
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+/* ── Metric picker ── */
+.wx-td-metric-rel { position: relative; }
+
+.wx-td-metric-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.14);
+  border: none;
+  border-radius: 22px;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-top: 4px;
+  opacity: 1;
+  transition: opacity 0.15s ease, background 0.15s;
+}
+.wx-td-metric-btn:active { background: rgba(255,255,255,0.22); }
+.wx-td-metric-rel.dd-open .wx-td-metric-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+.wx-metric-btn-icon { display: flex; align-items: center; }
+
+.wx-td-metric-chevron {
+  font-size: 10px;
+  opacity: 0.65;
+}
+
+.wx-td-metric-dropdown {
+  position: absolute;
+  right: 0;
+  top: 0;
+  background: rgba(18,18,18,0.82);
+  backdrop-filter: blur(56px) saturate(0);
+  -webkit-backdrop-filter: blur(56px) saturate(0);
+  border-radius: 18px;
+  padding: 4px 0;
+  min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+  z-index: 200;
+  overflow: hidden;
+  /* hidden by default — animated in/out via .dd-open class */
+  opacity: 0;
+  transform: scale(0.88) translateY(-6px);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.34,1.2,0.64,1),
+              transform 0.2s cubic-bezier(0.34,1.2,0.64,1);
+}
+
+.wx-td-metric-dropdown.dd-open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+/* closing: quicker, no spring */
+.wx-td-metric-dropdown.dd-closing {
+  opacity: 0;
+  transform: scale(0.88) translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.15s ease,
+              transform 0.15s ease;
+}
+
+.wx-td-metric-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.wx-td-metric-opt + .wx-td-metric-opt {
+  border-top: 0.5px solid rgba(255,255,255,0.12);
+}
+.wx-td-metric-opt:active { background: rgba(255,255,255,0.12); }
+
+.wx-td-opt-check {
+  width: 16px;
+  color: #007AFF;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  text-align: center;
+}
+.wx-td-opt-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.82);
+}
+.wx-td-opt-icon svg { display: block; }
+
+.wx-td-opt-label { font-size: 16px; color: #fff; font-weight: 400; letter-spacing: -0.1px; }
+.wx-td-opt-sub   { font-size: 12px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+
+/* ── Hourly icon strip ── */
+.wx-td-hour-strip {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 0 6px;
+  touch-action: pan-x;
+}
+.wx-td-hour-strip::-webkit-scrollbar { display: none; }
+
+.wx-td-hour-col {
+  flex: 0 0 46px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.wx-td-hour-lbl {
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  white-space: nowrap;
+  font-weight: 400;
+}
+.wx-td-hour-lbl.now {
+  color: #fff;
+  font-weight: 600;
+}
+
+.wx-td-hour-temp {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.82);
+  white-space: nowrap;
+}
+
+/* ── SVG charts ── */
+.wx-td-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.wx-td-chart-wrap { margin-top: 4px; }
+
+.wx-chart-axis-label {
+  font-size: 10.5px;
+  fill: rgba(255,255,255,0.38);
+  font-weight: 400;
+}
+
+.wx-chart-hl-label {
+  font-size: 11px;
+  fill: rgba(255,255,255,0.7);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.wx-chart-now-label {
+  font-size: 11px;
+  fill: rgba(255,255,255,0.55);
+  font-weight: 500;
+}
+
+.wx-chart-cat-label {
+  font-size: 10px;
+  fill: rgba(255,255,255,0.35);
+  font-weight: 400;
+}
+
+/* ── UV header ── */
+.wx-td-uvi-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0 2px;
+}
+
+.wx-td-uvi-val {
+  font-size: 42px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.wx-td-uvi-level {
+  font-size: 22px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.wx-td-uvi-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 4px;
+}
+
+/* ── Actual / Feels Like toggle ── */
+.wx-td-toggle-wrap {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 2px;
+  margin: 14px 0 5px;
+}
+
+.wx-td-toggle-btn {
+  flex: 1;
+  padding: 9px 8px;
+  border-radius: 22px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.48);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.wx-td-toggle-btn.active {
+  background: rgba(110,110,120,0.72);
+  color: #fff;
+}
+
+.wx-td-toggle-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  padding: 0 2px 10px;
+}
+
+/* ── Today card graph section ── */
+.wx-today-graph-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 18px;
+}
+
+.wx-today-graph-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* ── Topbar title icon ── */
+.wx-td-title-icon {
+  display: flex;
+  align-items: center;
+  color: rgba(255,255,255,0.82);
+}
+.wx-td-title-label {
+  font-size: 19px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.1px;
+}
+
+/* ── Forecast card H/L column ── */
+.wx-fd-hilo-col {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.wx-fd-hilo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.wx-fd-hilo-lbl {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.wx-fd-hilo-val {
+  font-size: 26px;
+  font-weight: 300;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+/* ── Forecast card stats grid ── */
+.wx-fd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: 4px;
+}
+.wx-fd-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 6px;
+  border-bottom: 0.5px solid rgba(255,255,255,0.07);
+}
+.wx-fd-stat:nth-last-child(-n+2) { border-bottom: none; }
+.wx-fd-stat:nth-child(odd)  { padding-right: 14px; }
+.wx-fd-stat:nth-child(even) { padding-left:  14px; border-left: 0.5px solid rgba(255,255,255,0.07); }
+.wx-fd-stat .wx-ico { opacity: 0.55; flex-shrink: 0; }
+.wx-fd-stat-info { display: flex; flex-direction: column; gap: 1px; }
+.wx-fd-stat-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.wx-fd-stat-value {
+  font-size: 19px;
+  color: rgba(255,255,255,0.9);
+  font-weight: 400;
+  letter-spacing: -0.2px;
+}
+
+/* ── Graph selector pills ── */
+.wx-td-graph-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 0 4px;
+  flex-shrink: 0;
+}
+.wx-td-graph-selector::-webkit-scrollbar { display: none; }
+
+.wx-graph-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+.wx-graph-btn:active { opacity: 0.7; }
+.wx-graph-btn.active {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.4);
+  color: #fff;
+}
+
+/* ── Precipitation section ── */
+.wx-td-precip { margin-top: 8px; }
+.wx-td-precip-inline { margin-top: 4px; }
+
+.wx-td-precip-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 3px;
+  letter-spacing: -0.3px;
+}
+
+.wx-td-precip-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,0.42);
+  margin: 0 0 4px;
+}
+

@@ -88,7 +88,10 @@ class HueWidget {
     if (this._roomRO) this._roomRO.disconnect();
     const rooms = this.el.querySelector('.hue-rooms');
     if (!rooms) return;
-    this._roomRO = new ResizeObserver(() => { this._sizeSliders(); this._fitCards(); });
+    this._roomRO = new ResizeObserver(() => {
+      clearTimeout(this._roTimer);
+      this._roTimer = setTimeout(() => { this._sizeSliders(); this._refreshAllBadges(); this._fitCards(); }, 100);
+    });
     this._roomRO.observe(rooms);
   }
 
@@ -285,7 +288,9 @@ class HueWidget {
     const wrapH = badge.closest('.slider-track-wrap')?.clientHeight || 0;
     if (wrapH > 0) {
       const thumbR = slider.clientHeight / 2;
-      badge.style.top = (thumbR + (1 - pct) * (wrapH - 2 * thumbR)) + 'px';
+      const badgeR = (badge.offsetHeight || 0) / 2;
+      const raw = thumbR + (1 - pct) * (wrapH - 2 * thumbR);
+      badge.style.top = Math.max(badgeR, Math.min(wrapH - badgeR, raw)) + 'px';
     }
   }
 

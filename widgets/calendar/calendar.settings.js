@@ -4,13 +4,7 @@ window.WidgetSettings['calendar'] = {
 
   section(cfg, H) {
     const c = cfg || {};
-    const { field, checkField, groupWrap, sectionWrap, esc } = H;
-    const cals = (c.calendars || []).map(cal => `
-      <div class="cal-row">
-        <input type="text" class="cal-id" value="${esc(cal.id || '')}" placeholder="calendar@gmail.com">
-        <input type="color" class="cal-color" value="${esc(cal.color || '#ffffff')}">
-        <button class="cal-remove icon-btn">×</button>
-      </div>`).join('');
+    const { field, checkField, groupWrap, sectionWrap } = H;
     return sectionWrap('Calendar', `
       ${groupWrap('Settings', `
         ${field('Max events to show', 'max_events', c.max_events ?? 20, 'number', 'Next N upcoming events across all calendars')}
@@ -18,8 +12,10 @@ window.WidgetSettings['calendar'] = {
         ${checkField('Hebrew RTL support', 'hebrew', c.hebrew)}
       `)}
       ${groupWrap('Calendars', `
-        <div id="cals-list" style="margin-bottom:12px">${cals}</div>
-        <button id="add-cal" class="link-btn">+ Add Calendar</button>
+        <div id="cals-list" style="margin-bottom:12px">
+          <div class="hint">Loading calendars…</div>
+        </div>
+        <button id="btn-reload-cals" class="link-btn">↻ Reload from Google</button>
       `)}
       ${groupWrap('Authentication', `
         <div class="field">
@@ -32,24 +28,45 @@ window.WidgetSettings['calendar'] = {
 
   onMount(sectionEl, cfg, H) {
     H.bindPickers();
-    H.bindRemoveBtns('.cal-remove', '.cal-row');
 
-    const add = sectionEl.querySelector('#add-cal');
-    if (add) {
-      add.onclick = () => {
-        const list = sectionEl.querySelector('#cals-list');
-        const row = document.createElement('div');
-        row.className = 'cal-row';
-        row.innerHTML = `
-          <input type="text" class="cal-id" value="">
-          <input type="color" class="cal-color" value="#ffffff">
-          <button class="cal-remove icon-btn">×</button>`;
-        list.appendChild(row);
-        H.bindRemoveBtns('.cal-remove', '.cal-row');
-      };
-    }
+    const list    = sectionEl.querySelector('#cals-list');
+    const cfgById = Object.fromEntries((cfg?.calendars || []).map(c => [c.id, c]));
 
-    const setup = sectionEl.querySelector('#btn-setup-cal');
+    const renderCals = (available) => {
+      if (!available?.length) {
+        list.innerHTML = '<div class="hint">No calendars found. Make sure Google Calendar is connected.</div>';
+        return;
+      }
+      list.innerHTML = available.map(cal => {
+        const existing = cfgById[cal.id];
+        const checked  = !!existing;
+        const color    = existing?.color || cal.color || '#3a7eff';
+        return `
+          <div class="cal-row" data-id="${H.esc(cal.id)}" data-name="${H.esc(cal.name || cal.id)}">
+            <input type="checkbox" class="cal-active"${checked ? ' checked' : ''}>
+            <span class="cal-name">${H.esc(cal.name || cal.id)}</span>
+            <input type="color" class="cal-color" value="${H.esc(color)}">
+          </div>`;
+      }).join('');
+    };
+
+    const loadCals = async () => {
+      list.innerHTML = '<div class="hint">Loading…</div>';
+      try {
+        const r = await fetch('/api/calendar/list-all');
+        if (!r.ok) throw new Error(r.status === 503
+          ? 'Not authenticated — connect Google Calendar first.'
+          : `HTTP ${r.status}`);
+        renderCals(await r.json());
+      } catch (e) {
+        list.innerHTML = `<div class="hint" style="color:#ff6b6b">${H.esc(e.message)}</div>`;
+      }
+    };
+
+    loadCals();
+    sectionEl.querySelector('#btn-reload-cals').onclick = loadCals;
+
+    const setup      = sectionEl.querySelector('#btn-setup-cal');
     const authStatus = sectionEl.querySelector('#cal-auth-status');
     if (setup) {
       setup.onclick = async () => {
@@ -71,6 +88,7 @@ window.WidgetSettings['calendar'] = {
               H.showToast('Google Calendar connected!');
               if (authStatus) authStatus.textContent = 'Connected ✓';
               setup.disabled = false; setup.textContent = 'Re-connect Google Calendar';
+              loadCals();
             }
           };
           window.addEventListener('message', onMsg);
@@ -96,10 +114,13 @@ window.WidgetSettings['calendar'] = {
         updated[el.name] = el.type === 'checkbox' ? el.checked
           : (el.type === 'number' || el.classList.contains('picker-input') ? Number(el.value) : el.value);
       });
-      updated.calendars = [...sectionEl.querySelectorAll('.cal-row')].map(r => ({
-        id: r.querySelector('.cal-id').value,
-        color: r.querySelector('.cal-color').value,
-      })).filter(x => x.id);
+      updated.calendars = [...sectionEl.querySelectorAll('.cal-row')]
+        .filter(r => r.querySelector('.cal-active')?.checked)
+        .map(r => ({
+          id:    r.dataset.id,
+          name:  r.dataset.name,
+          color: r.querySelector('.cal-color').value,
+        }));
       await H.doSave('calendar', updated);
     };
   },

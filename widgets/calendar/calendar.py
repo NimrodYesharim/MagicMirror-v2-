@@ -60,7 +60,11 @@ class CalendarService:
             self._cache = result
         return result
 
+    async def force_fetch(self) -> Optional[dict]:
+        return await self.fetch()
+
     def _fetch_sync(self) -> Optional[dict]:
+        self.config = yaml.safe_load(CONFIG_PATH.read_text(encoding='utf-8')) or {}
         try:
             from googleapiclient.discovery import build
 

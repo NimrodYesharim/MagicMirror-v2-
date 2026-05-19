@@ -116,6 +116,7 @@ function applyDisplay(display) {
   const gfx = display.graphics || 'high';
   document.body.classList.remove('gfx-high', 'gfx-mid', 'gfx-low');
   document.body.classList.add(`gfx-${gfx}`);
+  document.body.style.cursor = display.show_cursor ? 'default' : 'none';
 }
 
 // ── Reveal mirror after layout is ready ───────────────────────────────────────
@@ -247,9 +248,12 @@ function initWidgetScale() {
     const scale = _displayConfig.ui_scale ?? 360;
     el.style.setProperty('--wu', `${m / scale}px`);
   };
+  const ro = new ResizeObserver(entries => {
+    for (const entry of entries) setWu(entry.target);
+  });
   document.querySelectorAll('#mirror > .widget').forEach((el) => {
     setWu(el);
-    new ResizeObserver(() => setWu(el)).observe(el);
+    ro.observe(el);
   });
 }
 initWidgetScale();

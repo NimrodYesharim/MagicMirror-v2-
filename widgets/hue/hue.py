@@ -378,17 +378,23 @@ class HueService:
 
 
 async def register(app, ws_manager):
+    import json as _js
+
     service = HueService()
     await service.initialize()
 
     ws_manager.register_state_provider("hue_state", service.get_cached_state)
 
     async def _loop():
+        last_payload: str | None = None
         while True:
             await asyncio.sleep(service.config.get("poll_interval", 10))
             try:
                 state = await service.fetch_state()
-                await ws_manager.broadcast({"type": "hue_state", "data": state})
+                payload = _js.dumps(state, sort_keys=True)
+                if payload != last_payload:
+                    last_payload = payload
+                    await ws_manager.broadcast({"type": "hue_state", "data": state})
             except Exception as e:
                 print(f"Hue loop error: {e}")
 

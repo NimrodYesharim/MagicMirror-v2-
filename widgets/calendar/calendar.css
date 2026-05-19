@@ -6,6 +6,8 @@
   scrollbar-width: none;
   cursor: grab;
   touch-action: none;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - calc(32 * var(--wu))), transparent 100%);
+  mask-image: linear-gradient(to bottom, black calc(100% - calc(32 * var(--wu))), transparent 100%);
 }
 #widget-calendar:active { cursor: grabbing; }
 #widget-calendar::-webkit-scrollbar { display: none; }
@@ -17,35 +19,29 @@
   padding: calc(24 * var(--wu)) calc(32 * var(--wu));
 }
 
-/* ── Day group: date col (sticky) + events column ── */
+/* ── Day group: date col + events column ── */
 .cal-day-group {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-shrink: 0;
   border-bottom: calc(1 * var(--wu)) solid #111;
   padding: calc(6 * var(--wu)) calc(24 * var(--wu)) calc(6 * var(--wu)) calc(28 * var(--wu));
   gap: 0;
 }
 
-/* Date column — centered in its row; multi-day groups add sticky separately */
+/* Date column — JS drives translateY to keep it at the top while its group is partially visible */
 .cal-date-col {
-  align-self: center;
+  position: relative;
+  will-change: transform;
   width: calc(76 * var(--wu));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: calc(6 * var(--wu));
   padding-right: calc(12 * var(--wu));
   background: #000;
   z-index: 2;
-}
-
-/* Sticky only for multi-day event groups.
-   top = group padding (6wu) + half first-event height (23wu) - half date-col height (~19wu) ≈ 10wu
-   keeps the date visually centered with the first event row when clamped. */
-.cal-day-multi .cal-date-col {
-  position: sticky;
-  top: calc(10 * var(--wu));
 }
 
 .cal-date-num {
@@ -64,7 +60,7 @@
   line-height: 1.3;
 }
 
-/* Multi-day: bigger date number, day label, color bar, and title */
+/* Multi-day: bigger date number and day label */
 .cal-day-multi .cal-date-range {
   font-size: calc(16 * var(--wu));
 }
@@ -99,6 +95,10 @@
 
 .cal-event-row + .cal-event-row {
   border-top: calc(1 * var(--wu)) solid #181818;
+}
+
+.cal-event-row.no-sep {
+  border-top: none;
 }
 
 /* Multi-day events get extra vertical padding — height signals duration */
