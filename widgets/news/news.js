@@ -168,6 +168,10 @@ class NewsWidget {
     card.style.transition = 'opacity 0.5s';
     setTimeout(() => {
       const h = this._articleData[idx];
+      const isRtl = this._isRTL(h.title || '');
+      card.dir = isRtl ? 'rtl' : 'ltr';
+      card.classList.toggle('rtl', isRtl);
+
       document.getElementById('na-src').textContent   = h.source || '';
       document.getElementById('na-title').textContent = h.title  || '';
       document.getElementById('na-desc').textContent  = h.desc   || '';
