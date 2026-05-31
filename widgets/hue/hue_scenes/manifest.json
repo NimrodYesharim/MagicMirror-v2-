@@ -1,0 +1,7 @@
+{
+  "name": "hue_scenes",
+  "label": "Hue Scenes",
+  "wsType": "hue_state",
+  "basePath": "hue/hue_scenes",
+  "containerAttrs": { "data-wu-base": "120" }
+}

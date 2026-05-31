@@ -349,7 +349,10 @@ class NewsWidget {
     const onKey = e => { if (e.key === 'Escape') close(); };
     const close = () => {
       overlay.classList.remove('news-popup-in');
-      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+      let removed = false;
+      const remove = () => { if (!removed) { removed = true; overlay.remove(); } };
+      overlay.addEventListener('transitionend', remove, { once: true });
+      setTimeout(remove, 400); // Fallback: remove after max transition time
       document.removeEventListener('keydown', onKey);
     };
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });

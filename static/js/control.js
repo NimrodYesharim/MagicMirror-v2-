@@ -249,10 +249,18 @@ document.getElementById('btn-hard-reload').addEventListener('click', async () =>
 });
 
 document.getElementById('btn-reboot').addEventListener('click', async () => {
-  const ok = await confirm('End Mirror Process?', 'The server process will exit. The mirror display will go offline.', 'End Process');
+  const ok = await confirm('End Mirror Process?', 'The kiosk window and server process will be closed. The mirror display will go offline.', 'End Process');
   if (ok) {
     showToast('Ending process…');
     doAction('/api/reboot', 'POST', 'Ending mirror process…');
+  }
+});
+
+document.getElementById('btn-system-reboot').addEventListener('click', async () => {
+  const ok = await confirm('Reboot Pi?', 'The Raspberry Pi will restart. The mirror will come back online after reboot.', 'Reboot');
+  if (ok) {
+    showToast('Rebooting…');
+    doAction('/api/system-reboot', 'POST', 'Rebooting Pi…');
   }
 });
 
@@ -328,7 +336,22 @@ function renderTemplateScroll() {
       hideEditPanel();
     });
   });
-  document.getElementById('btn-add-tpl').addEventListener('click', addTemplate);
+  document.getElementById('btn-add-tpl').onclick = addTemplate;
+
+  // Template options bindings
+  const tpl = templates[_editTpl];
+  if (tpl) {
+    const ssTog = document.getElementById('show-seconds-toggle');
+    if (ssTog) {
+      ssTog.checked = tpl.show_seconds === true;
+      ssTog.onchange = () => { tpl.show_seconds = ssTog.checked; };
+    }
+    const scaleSel = document.getElementById('tpl-scale');
+    if (scaleSel) {
+      scaleSel.value = String(tpl.ui_scale ?? 360);
+      scaleSel.onchange = () => { tpl.ui_scale = parseInt(scaleSel.value, 10); };
+    }
+  }
 }
 
 function getTplWidgets() {
@@ -798,10 +821,15 @@ function renderDisplaySettings(body, cfg) {
       ${buildRow('Border Width (px)', `<input class="row-input" type="number" data-field="ring_border_width" data-type="number" value="${esc(rl.border_width || 120)}">`)}
       ${buildRow('Opacity', `<input class="row-input" type="number" data-field="ring_opacity" data-type="number" step="0.1" min="0" max="1" value="${esc(rl.opacity ?? 1)}">`)}
     </div>
-    <div class="sec-header">Buttons</div>
+    <div class="sec-header">Buttons & Pointer</div>
     <div class="card">
       ${buildRow('Ring Light Button', toggleField('ring_light_button', cfg.ring_light_button !== false))}
       ${buildRow('Sleep Button', toggleField('sleep_button', cfg.sleep_button !== false))}
+      ${buildRow('Show Cursor', toggleField('show_cursor', cfg.show_cursor))}
+    </div>
+    <div class="sec-header">Rendering</div>
+    <div class="card">
+      ${buildRow('Graphics Quality', selectField('graphics', cfg.graphics || 'high', [{v:'high',l:'High (Blur)'},{v:'mid',l:'Mid (Optimized)'},{v:'low',l:'Low (Pi)'}]))}
     </div>
   `;
 }
@@ -823,6 +851,8 @@ async function saveSettings(section) {
       ring_light: { border_width: raw.ring_border_width, opacity: raw.ring_opacity },
       ring_light_button: raw.ring_light_button,
       sleep_button:      raw.sleep_button,
+      show_cursor:       raw.show_cursor,
+      graphics:          raw.graphics,
     };
   } else if (section === 'calendar') {
     const raw = _origCollect(body);

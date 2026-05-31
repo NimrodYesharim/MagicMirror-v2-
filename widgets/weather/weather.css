@@ -3,10 +3,11 @@
 #widget-weather {
   display: flex;
   flex-direction: column;
-  padding: 0 calc(20 * var(--wu)) calc(4 * var(--wu));
   gap: 0;
   overflow: hidden;
   container-type: inline-size;
+  height: 100%;
+  width: 100%;
 }
 
 .wx-forecast-list {
@@ -17,22 +18,39 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
-.wx-forecast-list::-webkit-scrollbar { display: none; }
+
+.wx-forecast-list::-webkit-scrollbar {
+  display: none;
+}
 
 /* ── Weather icons — local wi-* PNGs ── */
 .wx-ico {
   display: block;
   flex-shrink: 0;
 }
+
 .wx-ico.sunny {
   filter: drop-shadow(0 0 calc(2 * var(--wu)) rgba(255, 238, 0, 0.4));
 }
+
 .wx-ico.night {
   opacity: 0.8;
 }
-.ico-xs { width: calc(22 * var(--wu)); height: calc(22 * var(--wu)); }
-.ico-sm { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
-.ico-md { width: calc(32 * var(--wu)); height: calc(32 * var(--wu)); }
+
+.ico-xs {
+  width: calc(30 * var(--wu));
+  height: calc(30 * var(--wu));
+}
+
+.ico-sm {
+  width: calc(42 * var(--wu));
+  height: calc(42 * var(--wu));
+}
+
+.ico-md {
+  width: calc(42 * var(--wu));
+  height: calc(42 * var(--wu));
+}
 
 /* ── Header ── */
 .wx-header {
@@ -50,7 +68,7 @@
 }
 
 .wx-today-lbl {
-  font-size: calc(28 * var(--wu));
+  font-size: calc(38 * var(--wu));
   font-weight: 700;
   color: #fff;
   letter-spacing: calc(-0.5 * var(--wu));
@@ -58,9 +76,9 @@
 }
 
 .wx-desc {
-  font-size: calc(17 * var(--wu));
+  font-size: calc(22 * var(--wu));
   font-weight: 300;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255, 255, 255, 0.45);
   letter-spacing: calc(0.1 * var(--wu));
 }
 
@@ -73,15 +91,16 @@
 .sun-badge {
   display: flex;
   align-items: center;
-  gap: calc(3 * var(--wu));
-  font-size: calc(13 * var(--wu));
+  gap: calc(4 * var(--wu));
+  font-size: calc(17 * var(--wu));
   font-weight: 400;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   letter-spacing: calc(0.2 * var(--wu));
 }
+
 .sun-badge svg {
-  width: calc(12 * var(--wu));
-  height: calc(12 * var(--wu));
+  width: calc(16 * var(--wu));
+  height: calc(16 * var(--wu));
   flex-shrink: 0;
 }
 
@@ -100,40 +119,47 @@
   cursor: grab;
   user-select: none;
 }
-.wx-hourly-strip:active { cursor: grabbing; }
-.wx-hourly-strip::-webkit-scrollbar { display: none; }
+
+.wx-hourly-strip:active {
+  cursor: grabbing;
+}
+
+.wx-hourly-strip::-webkit-scrollbar {
+  display: none;
+}
 
 .hour-col {
-  flex: 0 0 calc(48 * var(--wu));
+  flex: 0 0 calc(60 * var(--wu));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(2 * var(--wu));
+  gap: calc(3 * var(--wu));
 }
 
 .hour-lbl {
-  font-size: calc(12 * var(--wu));
+  font-size: calc(16 * var(--wu));
   font-weight: 400;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   white-space: nowrap;
   letter-spacing: calc(0.1 * var(--wu));
 }
+
 .hour-lbl.now {
   font-weight: 600;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .hour-temp {
-  font-size: calc(13 * var(--wu));
+  font-size: calc(17 * var(--wu));
   font-weight: 700;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
 }
 
 /* ── Divider ── */
 .wx-divider {
   height: calc(1 * var(--wu));
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   margin: 0 0 calc(2 * var(--wu));
   flex-shrink: 0;
 }
@@ -151,25 +177,32 @@
   touch-action: pan-y;
   cursor: grab;
 }
-.wx-forecast-list::-webkit-scrollbar { display: none; }
-.wx-forecast-list:active { cursor: grabbing; }
+
+.wx-forecast-list::-webkit-scrollbar {
+  display: none;
+}
+
+.wx-forecast-list:active {
+  cursor: grabbing;
+}
 
 .fcast-row {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding: calc(6 * var(--wu)) 0;
-  gap: calc(12 * var(--wu));
+  padding: calc(8 * var(--wu)) 0;
+  gap: calc(16 * var(--wu));
 }
 
 .fcast-name {
-  font-size: calc(18 * var(--wu));
+  font-size: calc(24 * var(--wu));
   font-weight: 400;
-  color: rgba(255,255,255,0.55);
-  width: calc(110 * var(--wu));
+  color: rgba(255, 255, 255, 0.55);
+  width: calc(140 * var(--wu));
   flex-shrink: 0;
   letter-spacing: calc(0.1 * var(--wu));
 }
+
 .fcast-row.today .fcast-name {
   font-weight: 700;
   color: #fff;
@@ -178,16 +211,17 @@
 /* Apple-style gradient line between icon and temp */
 .fcast-line-wrap {
   flex: 1;
-  height: calc(4 * var(--wu));
-  background: rgba(255,255,255,0.1);
-  border-radius: calc(2 * var(--wu));
+  height: calc(6 * var(--wu));
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: calc(3 * var(--wu));
   position: relative;
-  margin: 0 calc(4 * var(--wu));
+  margin: 0 calc(6 * var(--wu));
 }
+
 .fcast-line-fill {
   position: absolute;
   height: 100%;
-  border-radius: calc(2 * var(--wu));
+  border-radius: calc(3 * var(--wu));
   overflow: hidden;
 }
 
@@ -195,8 +229,8 @@
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: calc(7 * var(--wu));
-  height: calc(7 * var(--wu));
+  width: calc(9 * var(--wu));
+  height: calc(9 * var(--wu));
   border-radius: 50%;
   background: #fff;
   border: calc(1.5 * var(--wu)) solid rgb(0, 0, 0);
@@ -205,26 +239,36 @@
 }
 
 .fcast-hi {
-  font-size: calc(18 * var(--wu));
+  font-size: calc(24 * var(--wu));
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
-  min-width: calc(40 * var(--wu));
+  color: rgba(255, 255, 255, 0.9);
+  min-width: calc(52 * var(--wu));
   text-align: right;
 }
+
 .fcast-lo {
-  font-size: calc(18 * var(--wu));
+  font-size: calc(24 * var(--wu));
   font-weight: 300;
-  color: rgba(255,255,255,0.3);
-  min-width: calc(40 * var(--wu));
+  color: rgba(255, 255, 255, 0.3);
+  min-width: calc(52 * var(--wu));
   text-align: right;
-  margin-left: calc(8 * var(--wu));
+  margin-left: calc(10 * var(--wu));
 }
 
 /* Adjust for very thin widgets */
 @container (max-width: 300px) {
-  .fcast-name { width: calc(65 * var(--wu)); font-size: calc(16 * var(--wu)); }
-  .fcast-row { gap: calc(8 * var(--wu)); }
-  .fcast-line-wrap { margin: 0 calc(2 * var(--wu)); }
+  .fcast-name {
+    width: calc(65 * var(--wu));
+    font-size: calc(16 * var(--wu));
+  }
+
+  .fcast-row {
+    gap: calc(8 * var(--wu));
+  }
+
+  .fcast-line-wrap {
+    margin: 0 calc(2 * var(--wu));
+  }
 }
 
 /* ── Weather Modal Content ── */
@@ -243,7 +287,7 @@
 .wx-modal-header .wx-ico.ico-lg {
   width: 96px;
   height: 96px;
-  filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
 }
 
 .wx-modal-title-group {
@@ -275,7 +319,7 @@
   display: flex;
   gap: 48px;
   padding: 24px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 20px;
   justify-content: center;
 }
@@ -315,7 +359,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 16px;
   border: 1px solid transparent;
   transition: background 0.15s, border-color 0.15s;
@@ -324,12 +368,14 @@
 .wx-modal-stat[data-metric] {
   cursor: pointer;
 }
+
 .wx-modal-stat[data-metric]:active {
-  background: rgba(255,255,255,0.09);
+  background: rgba(255, 255, 255, 0.09);
 }
+
 .wx-modal-stat[data-metric].active {
-  background: rgba(255,255,255,0.09);
-  border-color: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .wx-modal-stat .wx-ico {
@@ -370,7 +416,7 @@
 
 .wx-modal-graph-container {
   padding: 20px;
-  background: rgba(255,255,255,0.03);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 20px;
   display: flex;
   flex-direction: column;
@@ -409,30 +455,48 @@
 }
 
 /* Fix var(--wu) icon sizes to px inside the today card graph section */
-#modal-card.wx-today-card .wx-today-graph-section .ico-xs { width: 16px !important; height: 16px !important; }
-#modal-card.wx-today-card .wx-today-graph-section .ico-sm { width: 18px !important; height: 18px !important; }
+#modal-card.wx-today-card .wx-today-graph-section .ico-xs {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+#modal-card.wx-today-card .wx-today-graph-section .ico-sm {
+  width: 18px !important;
+  height: 18px !important;
+}
+
 /* Stats grid icons */
-#modal-card.wx-today-card .wx-modal-grid .ico-xs { width: 28px !important; height: 28px !important; }
+#modal-card.wx-today-card .wx-modal-grid .ico-xs {
+  width: 28px !important;
+  height: 28px !important;
+}
 
 /* ── Tooltip HTML Glassmorphism ── */
 .wx-chart-html-tip {
-  background: rgba(28, 28, 34, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 6px 12px;
+  background: rgba(28, 28, 34, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 5px 10px;
   color: white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   min-width: 60px;
 }
 
 body:not(.gfx-low) .wx-chart-html-tip.active {
-  background: rgba(28, 28, 34, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+body.gfx-low .wx-chart-html-tip {
+  background: rgba(28, 28, 34, 0.55);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .wx-today-detail {
@@ -457,20 +521,33 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 }
 
 .wx-td-close {
-  width: 34px; height: 34px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.14);
-  border: none; cursor: pointer;
-  color: rgba(255,255,255,0.75);
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.75);
   font-size: 16px;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s;
   flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
+  margin-right: 0px;
 }
-.wx-td-close:hover, .wx-td-close:active { background: rgba(255,255,255,0.24); }
+
+.wx-td-close:hover,
+.wx-td-close:active {
+  background: rgba(255, 255, 255, 0.24);
+}
 
 /* ── Calendar strip ── */
-.wx-td-calendar { margin-bottom: 2px; }
+.wx-td-calendar {
+  margin-bottom: 2px;
+}
 
 .wx-cal-dow-row,
 .wx-cal-date-row {
@@ -481,7 +558,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 
 .wx-cal-dow {
   font-size: 12px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(255, 255, 255, 0.38);
   font-weight: 500;
   padding: 2px 0;
   letter-spacing: 0.5px;
@@ -490,7 +567,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 .wx-cal-date {
   font-size: 17px;
   font-weight: 400;
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   padding: 5px 0;
   position: relative;
   z-index: 0;
@@ -505,8 +582,10 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 .wx-cal-date.today::before {
   content: '';
   position: absolute;
-  width: 32px; height: 32px;
-  top: 50%; left: 50%;
+  width: 32px;
+  height: 32px;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
   background: #007AFF;
   border-radius: 50%;
@@ -516,7 +595,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 .wx-td-full-date {
   text-align: center;
   font-size: 13px;
-  color: rgba(255,255,255,0.42);
+  color: rgba(255, 255, 255, 0.42);
   margin: 4px 0 10px;
   letter-spacing: 0.2px;
 }
@@ -524,7 +603,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 /* ── Divider ── */
 .wx-td-div {
   height: 1px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   margin: 2px 0 8px;
 }
 
@@ -536,7 +615,11 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   padding: 6px 0 4px;
 }
 
-.wx-td-cur-left { display: flex; flex-direction: column; gap: 2px; }
+.wx-td-cur-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .wx-td-cur-temp-row {
   display: flex;
@@ -554,20 +637,22 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 
 .wx-td-hilo {
   font-size: 14px;
-  color: rgba(255,255,255,0.48);
+  color: rgba(255, 255, 255, 0.48);
   font-weight: 400;
   letter-spacing: 0.3px;
 }
 
 /* ── Metric picker ── */
-.wx-td-metric-rel { position: relative; }
+.wx-td-metric-rel {
+  position: relative;
+}
 
 .wx-td-metric-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: rgba(255,255,255,0.14);
+  background: rgba(255, 255, 255, 0.14);
   border: none;
   border-radius: 22px;
   color: #fff;
@@ -578,12 +663,20 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   opacity: 1;
   transition: opacity 0.15s ease, background 0.15s;
 }
-.wx-td-metric-btn:active { background: rgba(255,255,255,0.22); }
+
+.wx-td-metric-btn:active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .wx-td-metric-rel.dd-open .wx-td-metric-btn {
   opacity: 0;
   pointer-events: none;
 }
-.wx-metric-btn-icon { display: flex; align-items: center; }
+
+.wx-metric-btn-icon {
+  display: flex;
+  align-items: center;
+}
 
 .wx-td-metric-chevron {
   font-size: 10px;
@@ -598,7 +691,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   border-radius: 18px;
   padding: 4px 0;
   min-width: 190px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
   z-index: 200;
   overflow: hidden;
   /* hidden by default — animated in/out via .dd-open class */
@@ -606,8 +699,8 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   transform: scale(0.88) translateY(-6px);
   transform-origin: top right;
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.34,1.2,0.64,1),
-              transform 0.2s cubic-bezier(0.34,1.2,0.64,1);
+  transition: opacity 0.2s cubic-bezier(0.34, 1.2, 0.64, 1),
+    transform 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 .wx-td-metric-dropdown.dd-open {
@@ -622,7 +715,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   transform: scale(0.88) translateY(-6px);
   pointer-events: none;
   transition: opacity 0.15s ease,
-              transform 0.15s ease;
+    transform 0.15s ease;
 }
 
 .wx-td-metric-opt {
@@ -633,10 +726,14 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   cursor: pointer;
   transition: background 0.1s;
 }
-.wx-td-metric-opt + .wx-td-metric-opt {
-  border-top: 0.5px solid rgba(255,255,255,0.12);
+
+.wx-td-metric-opt+.wx-td-metric-opt {
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
 }
-.wx-td-metric-opt:active { background: rgba(255,255,255,0.12); }
+
+.wx-td-metric-opt:active {
+  background: rgba(255, 255, 255, 0.12);
+}
 
 .wx-td-opt-check {
   width: 16px;
@@ -646,6 +743,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   flex-shrink: 0;
   text-align: center;
 }
+
 .wx-td-opt-icon {
   width: 26px;
   height: 26px;
@@ -653,12 +751,25 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: rgba(255,255,255,0.82);
+  color: rgba(255, 255, 255, 0.82);
 }
-.wx-td-opt-icon svg { display: block; }
 
-.wx-td-opt-label { font-size: 16px; color: #fff; font-weight: 400; letter-spacing: -0.1px; }
-.wx-td-opt-sub   { font-size: 12px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+.wx-td-opt-icon svg {
+  display: block;
+}
+
+.wx-td-opt-label {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 400;
+  letter-spacing: -0.1px;
+}
+
+.wx-td-opt-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.38);
+  margin-top: 1px;
+}
 
 /* ── Hourly icon strip ── */
 .wx-td-hour-strip {
@@ -670,7 +781,10 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   padding: 10px 0 6px;
   touch-action: pan-x;
 }
-.wx-td-hour-strip::-webkit-scrollbar { display: none; }
+
+.wx-td-hour-strip::-webkit-scrollbar {
+  display: none;
+}
 
 .wx-td-hour-col {
   flex: 0 0 46px;
@@ -682,10 +796,11 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 
 .wx-td-hour-lbl {
   font-size: 11px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(255, 255, 255, 0.38);
   white-space: nowrap;
   font-weight: 400;
 }
+
 .wx-td-hour-lbl.now {
   color: #fff;
   font-weight: 600;
@@ -694,36 +809,44 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 .wx-td-hour-temp {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(255,255,255,0.82);
+  color: rgba(255, 255, 255, 0.82);
   white-space: nowrap;
 }
 
 /* ── SVG charts ── */
-.wx-td-svg { width: 100%; height: auto; display: block; overflow: visible; }
-.wx-td-chart-wrap { margin-top: 4px; }
+.wx-td-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.wx-td-chart-wrap {
+  margin-top: 4px;
+}
 
 .wx-chart-axis-label {
   font-size: 10.5px;
-  fill: rgba(255,255,255,0.38);
+  fill: rgba(255, 255, 255, 0.38);
   font-weight: 400;
 }
 
 .wx-chart-hl-label {
   font-size: 11px;
-  fill: rgba(255,255,255,0.7);
+  fill: rgba(255, 255, 255, 0.7);
   font-weight: 600;
   letter-spacing: 0.5px;
 }
 
 .wx-chart-now-label {
   font-size: 11px;
-  fill: rgba(255,255,255,0.55);
+  fill: rgba(255, 255, 255, 0.55);
   font-weight: 500;
 }
 
 .wx-chart-cat-label {
   font-size: 10px;
-  fill: rgba(255,255,255,0.35);
+  fill: rgba(255, 255, 255, 0.35);
   font-weight: 400;
 }
 
@@ -751,14 +874,14 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 
 .wx-td-uvi-sub {
   font-size: 12px;
-  color: rgba(255,255,255,0.4);
+  color: rgba(255, 255, 255, 0.4);
   margin-bottom: 4px;
 }
 
 /* ── Actual / Feels Like toggle ── */
 .wx-td-toggle-wrap {
   display: flex;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 2px;
   margin: 14px 0 5px;
@@ -770,20 +893,21 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   border-radius: 22px;
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.48);
+  color: rgba(255, 255, 255, 0.48);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .wx-td-toggle-btn.active {
-  background: rgba(110,110,120,0.72);
+  background: rgba(110, 110, 120, 0.72);
   color: #fff;
 }
 
 .wx-td-toggle-desc {
   font-size: 12px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(255, 255, 255, 0.38);
   padding: 0 2px 10px;
 }
 
@@ -792,7 +916,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 18px;
 }
 
@@ -807,8 +931,9 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 .wx-td-title-icon {
   display: flex;
   align-items: center;
-  color: rgba(255,255,255,0.82);
+  color: rgba(255, 255, 255, 0.82);
 }
+
 .wx-td-title-label {
   font-size: 19px;
   font-weight: 600;
@@ -823,19 +948,22 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   align-items: center;
   flex-shrink: 0;
 }
+
 .wx-fd-hilo-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
 }
+
 .wx-fd-hilo-lbl {
   font-size: 12px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(255, 255, 255, 0.38);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
+
 .wx-fd-hilo-val {
   font-size: 26px;
   font-weight: 300;
@@ -850,28 +978,50 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   gap: 0;
   margin-top: 4px;
 }
+
 .wx-fd-stat {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 13px 6px;
-  border-bottom: 0.5px solid rgba(255,255,255,0.07);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
 }
-.wx-fd-stat:nth-last-child(-n+2) { border-bottom: none; }
-.wx-fd-stat:nth-child(odd)  { padding-right: 14px; }
-.wx-fd-stat:nth-child(even) { padding-left:  14px; border-left: 0.5px solid rgba(255,255,255,0.07); }
-.wx-fd-stat .wx-ico { opacity: 0.55; flex-shrink: 0; }
-.wx-fd-stat-info { display: flex; flex-direction: column; gap: 1px; }
+
+.wx-fd-stat:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.wx-fd-stat:nth-child(odd) {
+  padding-right: 14px;
+}
+
+.wx-fd-stat:nth-child(even) {
+  padding-left: 14px;
+  border-left: 0.5px solid rgba(255, 255, 255, 0.07);
+}
+
+.wx-fd-stat .wx-ico {
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.wx-fd-stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .wx-fd-stat-label {
   font-size: 12px;
-  color: rgba(255,255,255,0.38);
+  color: rgba(255, 255, 255, 0.38);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.6px;
 }
+
 .wx-fd-stat-value {
   font-size: 19px;
-  color: rgba(255,255,255,0.9);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 400;
   letter-spacing: -0.2px;
 }
@@ -886,31 +1036,43 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
   padding: 8px 0 4px;
   flex-shrink: 0;
 }
-.wx-td-graph-selector::-webkit-scrollbar { display: none; }
+
+.wx-td-graph-selector::-webkit-scrollbar {
+  display: none;
+}
 
 .wx-graph-btn {
   flex-shrink: 0;
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1.5px solid rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   background: transparent;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
 }
-.wx-graph-btn:active { opacity: 0.7; }
+
+.wx-graph-btn:active {
+  opacity: 0.7;
+}
+
 .wx-graph-btn.active {
-  background: rgba(255,255,255,0.18);
-  border-color: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
 }
 
 /* ── Precipitation section ── */
-.wx-td-precip { margin-top: 8px; }
-.wx-td-precip-inline { margin-top: 4px; }
+.wx-td-precip {
+  margin-top: 8px;
+}
+
+.wx-td-precip-inline {
+  margin-top: 4px;
+}
 
 .wx-td-precip-title {
   font-size: 20px;
@@ -922,7 +1084,7 @@ body:not(.gfx-low) .wx-chart-html-tip.active {
 
 .wx-td-precip-sub {
   font-size: 13px;
-  color: rgba(255,255,255,0.42);
+  color: rgba(255, 255, 255, 0.42);
   margin: 0 0 4px;
 }
 

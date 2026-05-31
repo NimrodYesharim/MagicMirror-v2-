@@ -147,26 +147,39 @@ async def list_widgets():
     """Return a list of widget manifest objects sorted by settingsOrder."""
     base_dir = Path("widgets")
     widgets = []
+
+    def _load_widget(item, base_path=None):
+        manifest_path = item / "manifest.json"
+        if manifest_path.exists():
+            try:
+                manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception:
+                manifest = {}
+        else:
+            manifest = {}
+        manifest.setdefault("name", item.name)
+        manifest.setdefault("label", item.name.capitalize())
+        manifest.setdefault("wsType", item.name)
+        manifest.setdefault("containerAttrs", {})
+        manifest.setdefault("settingsOrder", 999)
+        if base_path:
+            manifest["basePath"] = base_path
+        widgets.append(manifest)
+
     if base_dir.exists():
         for item in sorted(base_dir.iterdir(), key=lambda p: p.name):
             if item.name.startswith("_") or not item.is_dir():
                 continue
-            if not (item / f"{item.name}.js").exists():
-                continue
-            manifest_path = item / "manifest.json"
-            if manifest_path.exists():
-                try:
-                    manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
-                except Exception:
-                    manifest = {}
-            else:
-                manifest = {}
-            manifest.setdefault("name", item.name)
-            manifest.setdefault("label", item.name.capitalize())
-            manifest.setdefault("wsType", item.name)
-            manifest.setdefault("containerAttrs", {})
-            manifest.setdefault("settingsOrder", 999)
-            widgets.append(manifest)
+            # Top-level widget
+            if (item / f"{item.name}.js").exists():
+                _load_widget(item)
+            # Sub-widgets (e.g. widgets/hue/hue_scenes/)
+            for sub in sorted(item.iterdir(), key=lambda p: p.name):
+                if sub.name.startswith("_") or not sub.is_dir():
+                    continue
+                if (sub / f"{sub.name}.js").exists():
+                    _load_widget(sub, base_path=f"{item.name}/{sub.name}")
+
     widgets.sort(key=lambda m: (m.get("settingsOrder") or 999, m.get("name", "")))
     return widgets
 
@@ -380,6 +393,15 @@ async def shutdown_pi():
     asyncio.create_task(_do())
     return {"ok": True}
 
+@app.post("/api/system-reboot")
+async def system_reboot():
+    import subprocess, asyncio
+    async def _do():
+        await asyncio.sleep(0.5)
+        subprocess.run(["sudo", "reboot"])
+    asyncio.create_task(_do())
+    return {"ok": True}
+
 @app.get("/api/status")
 async def get_status(request: Request):
     status = {}
@@ -569,6 +591,13 @@ async def get_hue_data(request: Request):
         raise HTTPException(status_code=503, detail='No data yet')
     return hue.get_cached_state()
 
+@app.get('/api/data/hue_scenes')
+async def get_hue_scenes_data(request: Request):
+    hue = request.app.state.widgets.get("hue")
+    if not hue or hue.get_cached_state() is None:
+        raise HTTPException(status_code=503, detail='No data yet')
+    return hue.get_cached_state()
+
 @app.get('/api/data/news')
 async def get_news_data(request: Request):
     news = request.app.state.widgets.get("news")
@@ -678,6 +707,10 @@ async def _ctrl_reboot():
 async def _ctrl_shutdown():
     return await shutdown_pi()
 
+@_control_app.post("/api/system-reboot")
+async def _ctrl_system_reboot():
+    return await system_reboot()
+
 @_control_app.get("/api/calendar/list-all")
 async def _ctrl_calendar_list_all(request: Request):
     return await calendar_list_all(request)
@@ -714,6 +747,25 @@ async def _ctrl_hue_create_zone(body: CreateZoneBody, request: Request):
 async def _ctrl_hue_delete_zone(zone_id: str, request: Request):
     return await hue_delete_zone(zone_id, request)
 
+@_control_app.put("/api/hue/room/{gl_id}/power")
+async def _ctrl_hue_power(gl_id: str, body: PowerBody, request: Request):
+    return await hue_power(gl_id, body, request)
+
+@_control_app.put("/api/hue/room/{gl_id}/brightness")
+async def _ctrl_hue_brightness(gl_id: str, body: BrightnessBody, request: Request):
+    return await hue_brightness(gl_id, body, request)
+
+@_control_app.put("/api/hue/room/{gl_id}/color_temp")
+async def _ctrl_hue_color_temp(gl_id: str, body: ColorTempBody, request: Request):
+    return await hue_color_temp(gl_id, body, request)
+
+@_control_app.put("/api/hue/room/{gl_id}/color")
+async def _ctrl_hue_color(gl_id: str, body: ColorBody, request: Request):
+    return await hue_color(gl_id, body, request)
+
+@_control_app.post("/api/hue/scene/{scene_id}/activate")
+async def _ctrl_hue_scene_activate(scene_id: str, request: Request):
+    return await hue_scene_activate(scene_id, request)
 @_control_app.get("/api/system/info")
 async def _ctrl_system_info():
     return await system_info()

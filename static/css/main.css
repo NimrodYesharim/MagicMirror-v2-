@@ -18,6 +18,11 @@
   -webkit-user-drag: none;
 }
 
+/* ── Cursor ── hide on mirror, show only when config enables it */
+body:not(.show-cursor),
+body:not(.show-cursor) * { cursor: none !important; }
+body.show-cursor { cursor: default; }
+
 html, body {
   width: 1080px;
   height: 1920px;
@@ -27,7 +32,7 @@ html, body {
   font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  cursor: none;
+  /* cursor controlled via .show-cursor class above */
   user-select: none;
 }
 
@@ -39,7 +44,7 @@ html, body {
   grid-template-columns: repeat(12, 1fr);
   grid-template-rows: repeat(24, 80px);
   opacity: 0;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.22s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 #menu-toggle {
@@ -51,9 +56,13 @@ html, body {
 .widget {
   overflow: visible;
   position: relative;
+  width: 100%;
+  height: 100%;
   --wu: 1px;
-  padding-top: calc(10 * var(--wu)) !important;
-  contain: layout style paint;
+  padding: calc(20 * var(--wu)) calc(32 * var(--wu)) !important;
+  contain: layout;
+  /* Prevent gfx-low global transition-duration from animating grid repositioning */
+  transition-property: opacity !important;
 }
 
 /* Loading skeletons — inherit --wu from .widget */
@@ -112,9 +121,7 @@ html, body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(28, 28, 30, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     0 10px 64px rgba(0, 0, 0, 0.28),
@@ -191,9 +198,7 @@ html, body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(28, 28, 30, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 10px 64px rgba(0, 0, 0, 0.28),
@@ -206,11 +211,6 @@ html, body {
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-#radial-menu.open .radial-btn {
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
 .radial-btn:active {
@@ -250,9 +250,7 @@ html, body {
   font-weight: 500;
   font-family: 'SFPro', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(28, 28, 30, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 6px 14px;
   border-radius: 12px;
@@ -264,8 +262,6 @@ html, body {
 
 #radial-menu.open .radial-label {
   opacity: 1;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   transition: all 0.3s ease calc(var(--delay) * 60ms + 300ms);
 }
 
@@ -279,16 +275,14 @@ html, body {
 /* Alert overlay styles live in css/widgets/redalert.css */
 
 #modal-overlay {
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease, backdrop-filter 0.3s ease, visibility 0.3s;
+  transition: opacity 0.3s ease, visibility 0.3s;
   visibility: hidden;
 }
 
@@ -296,30 +290,23 @@ html, body {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 #modal-card {
   width: 600px;
   max-width: 90%;
   max-height: 80%;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(32, 32, 36, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 32px;
   padding: 40px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   
-  /* Swoosh animation setup */
-  --origin-x: 50%;
-  --origin-y: 50%;
-  transform: translate(calc(var(--origin-x) - 50%), calc(var(--origin-y) - 50%)) scale(0);
   opacity: 0;
-  transition: 
-    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.4s ease;
+  /* Seamless closing transition */
+  transition: opacity 0.25s ease;
   
   color: #fff;
   overflow-y: auto;
@@ -328,10 +315,9 @@ html, body {
 #modal-card::-webkit-scrollbar { display: none; }
 
 #modal-overlay.open #modal-card {
-  transform: translate(0, 0) scale(1);
   opacity: 1;
-  backdrop-filter: blur(25px) saturate(180%);
-  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  /* Elegant opening transition */
+  transition: opacity 0.35s ease-out;
 }
 
 body.modal-open #mirror {
@@ -341,60 +327,23 @@ body.modal-open #mirror {
 }
 
 /* ── Hebrew / RTL ── */
-.rtl { direction: rtl; font-family: 'Rubik', sans-serif; }
+/* ── Graphics quality tiers ─────────────────────────────────────────────────
+   Base (no class) = solid glass (GPU-free).
+   gfx-low  = most opaque, reduced animations.
+   gfx-mid  = blur on modals/weather/news — NOT on radial menu or hue.
+   gfx-high = blur on everything.
+   ──────────────────────────────────────────────────────────────────────── */
 
-/* ── Graphics quality tiers ── */
-/* gfx-high (default): full effects, no overrides needed */
-
-/* gfx-mid: halve blur radii, remove saturate */
-body.gfx-mid #menu-toggle {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-body.gfx-mid #radial-menu.open .radial-btn {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-body.gfx-mid #radial-menu.open .radial-label {
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-}
-body.gfx-mid #modal-overlay.open {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-body.gfx-mid #modal-overlay.open #modal-card {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-body.gfx-mid.modal-open #mirror {
-  filter: brightness(0.55);
-}
-
-/* gfx-low: no blur at all — replaces translucent backgrounds with solid-ish ones */
-body.gfx-low #menu-toggle {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(40, 40, 40, 0.9);
-}
+/* ── gfx-low: fully opaque, no animations ── */
+body.gfx-low #menu-toggle,
 body.gfx-low .radial-btn {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(40, 40, 40, 0.9);
+  background: rgba(40, 40, 40, 0.95);
 }
 body.gfx-low .radial-label {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(30, 30, 30, 0.95);
-}
-body.gfx-low #modal-overlay.open {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: rgba(30, 30, 30, 0.97);
 }
 body.gfx-low #modal-card {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  background: rgba(18, 18, 18, 0.97);
+  background: rgba(18, 18, 18, 0.98);
 }
 body.gfx-low.modal-open #mirror {
   filter: brightness(0.45);
@@ -408,4 +357,43 @@ body.gfx-low * {
 }
 body.gfx-low .radial-item {
   transition: transform 0.2s ease, opacity 0.15s ease !important;
+}
+
+/* ── gfx-mid: blur on modals + widget popups — NOT radial menu or hue ── */
+body.gfx-mid #modal-overlay.open {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
+}
+body.gfx-mid #modal-overlay.open #modal-card {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── gfx-high: blur on everything ── */
+body.gfx-high #menu-toggle {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255, 255, 255, 0.08);
+}
+body.gfx-high .radial-btn {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background: rgba(255, 255, 255, 0.08);
+}
+body.gfx-high .radial-label {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.1);
+}
+body.gfx-high #modal-overlay.open {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.4);
+}
+body.gfx-high #modal-overlay.open #modal-card {
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  background: rgba(255, 255, 255, 0.1);
 }

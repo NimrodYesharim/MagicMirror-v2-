@@ -8,15 +8,17 @@
   touch-action: none;
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - calc(32 * var(--wu))), transparent 100%);
   mask-image: linear-gradient(to bottom, black calc(100% - calc(32 * var(--wu))), transparent 100%);
+  height: 100%;
+  width: 100%;
 }
 #widget-calendar:active { cursor: grabbing; }
 #widget-calendar::-webkit-scrollbar { display: none; }
 
 .cal-empty {
-  font-size: calc(22 * var(--wu));
+  font-size: calc(25 * var(--wu));
   font-weight: 300;
   color: #444;
-  padding: calc(24 * var(--wu)) calc(32 * var(--wu));
+  padding: calc(8 * var(--wu)) 0;
 }
 
 /* ── Day group: date col + events column ── */
@@ -25,7 +27,7 @@
   align-items: flex-start;
   flex-shrink: 0;
   border-bottom: calc(1 * var(--wu)) solid #111;
-  padding: calc(6 * var(--wu)) calc(24 * var(--wu)) calc(6 * var(--wu)) calc(28 * var(--wu));
+  padding: calc(7 * var(--wu)) 0;
   gap: 0;
 }
 
@@ -33,19 +35,19 @@
 .cal-date-col {
   position: relative;
   will-change: transform;
-  width: calc(76 * var(--wu));
+  width: calc(88 * var(--wu));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  padding-top: calc(6 * var(--wu));
-  padding-right: calc(12 * var(--wu));
+  padding-top: calc(7 * var(--wu));
+  padding-right: calc(14 * var(--wu));
   background: #000;
   z-index: 2;
 }
 
 .cal-date-num {
-  font-size: calc(17 * var(--wu));
+  font-size: calc(20 * var(--wu));
   font-weight: 700;
   color: #ccc;
   white-space: nowrap;
@@ -54,7 +56,7 @@
 
 /* Date range ("10-13 Apr", "30 Apr – 2 May") — slightly smaller to fit */
 .cal-date-range {
-  font-size: calc(13 * var(--wu));
+  font-size: calc(15 * var(--wu));
   white-space: normal;
   word-break: keep-all;
   line-height: 1.3;
@@ -62,14 +64,14 @@
 
 /* Multi-day: bigger date number and day label */
 .cal-day-multi .cal-date-range {
-  font-size: calc(16 * var(--wu));
+  font-size: calc(18 * var(--wu));
 }
 .cal-day-multi .cal-date-day {
-  font-size: calc(14 * var(--wu));
+  font-size: calc(16 * var(--wu));
 }
 
 .cal-date-day {
-  font-size: calc(11 * var(--wu));
+  font-size: calc(13 * var(--wu));
   font-weight: 400;
   color: #4a4a4a;
   white-space: nowrap;
@@ -89,8 +91,8 @@
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  min-height: calc(46 * var(--wu));
-  padding: calc(4 * var(--wu)) 0;
+  min-height: calc(53 * var(--wu));
+  padding: calc(5 * var(--wu)) 0;
 }
 
 .cal-event-row + .cal-event-row {
@@ -108,11 +110,11 @@
 
 /* Per-event color border — exact color, no blending */
 .cal-border {
-  width: calc(3 * var(--wu));
+  width: calc(3.5 * var(--wu));
   border-radius: calc(2 * var(--wu));
   flex-shrink: 0;
   align-self: stretch;
-  margin: calc(2 * var(--wu)) calc(14 * var(--wu)) calc(2 * var(--wu)) 0;
+  margin: calc(2.5 * var(--wu)) calc(16 * var(--wu)) calc(2.5 * var(--wu)) 0;
   opacity: 0.85;
 }
 
@@ -132,7 +134,7 @@
 }
 
 .cal-title {
-  font-size: calc(18 * var(--wu));
+  font-size: calc(21 * var(--wu));
   font-weight: 600;
   color: #ddd;
   white-space: nowrap;
@@ -143,7 +145,7 @@
 }
 
 .cal-event-multi .cal-title {
-  font-size: calc(18 * var(--wu));
+  font-size: calc(21 * var(--wu));
 }
 
 .cal-title.rtl {
@@ -173,7 +175,7 @@
 .cal-meta {
   display: flex;
   align-items: baseline;
-  font-size: calc(14 * var(--wu));
+  font-size: calc(16 * var(--wu));
   overflow: hidden;
   white-space: nowrap;
   color: #888;
@@ -190,7 +192,7 @@
   flex-shrink: 0;
   font-weight: 400;
   color: #444;
-  padding: 0 calc(3 * var(--wu));
+  padding: 0 calc(3.5 * var(--wu));
 }
 
 .cal-loc-part {

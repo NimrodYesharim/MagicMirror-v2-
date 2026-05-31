@@ -22,7 +22,7 @@ class HueWidget {
     if (!data) { console.warn('[Hue] Render called without data'); return; }
     
     try {
-      const { master, rooms, scenes } = data;
+      const { master, rooms } = data;
       const activeRooms = [];
       
       if (master && master.id) {
@@ -47,24 +47,13 @@ class HueWidget {
         ? undiscovered.map(n => `<div class="room-card room-undisc"><div class="card-header"><div class="card-titles"><div class="card-zone">${this._esc(n)}</div></div></div><div class="undisc-label">Not found on bridge</div></div>`).join('')
         : '';
 
-      const scenesArr = (scenes && Array.isArray(scenes)) ? scenes : [];
-      const sceneItemsHtml = scenesArr.map(s => this._sceneHTML(s)).join('');
-      const triplicatedScenes = sceneItemsHtml ? `${sceneItemsHtml}${sceneItemsHtml}${sceneItemsHtml}` : '';
-
-      this.el.innerHTML = `
-        <div class="hue-scenes-outer">
-          <div class="hue-scenes" id="hue-scenes-list">
-            ${triplicatedScenes}
-          </div>
-        </div>
-        <div class="hue-rooms">${activeRooms.map(r => this._cardHTML(r)).join('')}${undiscHtml}</div>`;
+      this.el.innerHTML = `<div class="hue-rooms">${activeRooms.map(r => this._cardHTML(r)).join('')}${undiscHtml}</div>`;
 
       this._bindAll();
-      if (sceneItemsHtml) this._initInfiniteScroll();
+      this._observeSliders();
       
       this._rendered = true;
       requestAnimationFrame(() => {
-        this._sizeSliders();
         this._refreshAllBadges();
         this._fitCards();
       });
@@ -72,6 +61,29 @@ class HueWidget {
     } catch (err) {
       console.error('[Hue] Render error:', err);
     }
+  }
+
+  _observeSliders() {
+    if (this._sliderRO) {
+      this._sliderRO.disconnect();
+    }
+    this._sliderRO = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const wrap = entry.target;
+        const h = entry.contentRect.height;
+        if (h > 0) {
+          wrap.querySelectorAll('.big-slider').forEach(s => {
+            s.style.width = h + 'px';
+          });
+          const badge = wrap.querySelector('.slider-badge');
+          const slider = wrap.querySelector('.big-slider');
+          if (badge && slider) this._refreshBadge(slider, badge);
+        }
+      }
+    });
+    this.el.querySelectorAll('.slider-track-wrap').forEach(wrap => {
+      this._sliderRO.observe(wrap);
+    });
   }
 
   _fitCards() {
@@ -131,24 +143,14 @@ class HueWidget {
           card.style.setProperty('--room-color', this._getMainColor(this._cardData[r.id]));
         }
       }
+      // Re-measure sliders in case on/off state changed card layout
+      requestAnimationFrame(() => { this._sizeSliders(); this._refreshAllBadges(); });
     } catch (err) {
       console.error('[Hue] Update error:', err);
     }
   }
 
-  _sceneHTML(s) {
-    if (!s) return '';
-    const active = this._activeScene === s.id;
-    const roomLabel = s.room ? `<div class="scene-room">${this._esc(s.room)}</div>` : '';
-    return `
-      <div class="scene-item">
-        <button class="scene-btn${active ? ' active' : ''}"
-          style="--g:${s.gradient || 'conic-gradient(#444,#444)'}"
-          data-scene-id="${s.id}" title="${this._esc(s.name)}"></button>
-        <div class="scene-name">${this._esc(s.name)}</div>
-        ${roomLabel}
-      </div>`;
-  }
+
 
   _getMainColor(r) {
     if (!r.on) return '#444';
@@ -294,36 +296,9 @@ class HueWidget {
     }
   }
 
-  _initInfiniteScroll() {
-    const list = this.el.querySelector('#hue-scenes-list');
-    if (!list) return;
 
-    requestAnimationFrame(() => {
-      if (list.scrollHeight > 0) {
-        list.scrollTop = list.scrollHeight / 3;
-      }
-    });
-
-    list.onscroll = () => {
-      const h = list.scrollHeight / 3;
-      if (h <= 0) return;
-      if (list.scrollTop < 10) {
-        list.scrollTop += h;
-      } else if (list.scrollTop > h * 2 - 10) {
-        list.scrollTop -= h;
-      }
-    };
-  }
 
   _bindAll() {
-    this.el.querySelectorAll('.scene-btn').forEach(btn => {
-      btn.onclick = () => {
-        this._activeScene = btn.dataset.sceneId;
-        this.el.querySelectorAll('.scene-btn').forEach(b => b.classList.toggle('active', b === btn));
-        this._api(`/api/hue/scene/${btn.dataset.sceneId}/activate`, 'POST');
-      };
-    });
-
     this.el.querySelectorAll('.toggle-input').forEach(inp => {
       inp.onchange = () => {
         const id = inp.dataset.id, isOn = inp.checked;
@@ -348,6 +323,8 @@ class HueWidget {
           
           // Ensure sliders are disabled/enabled
           card.querySelectorAll('.big-slider').forEach(s => s.disabled = !isOn);
+          // Re-measure slider dimensions since card layout may have changed
+          requestAnimationFrame(() => { this._sizeSliders(); this._refreshAllBadges(); });
         }
         
         this._api(`/api/hue/room/${id}/power`, 'PUT', { on: isOn });
@@ -407,7 +384,8 @@ class HueWidget {
     if (wrap) {
       wrap.innerHTML = this._slidersHTML(id, mode, this._cardData[id]);
       wrap.querySelectorAll('.big-slider').forEach(s => this._bindSlider(s));
-      requestAnimationFrame(() => { this._sizeSliders(); this._refreshAllBadges(); });
+      this._observeSliders();
+      requestAnimationFrame(() => { this._refreshAllBadges(); });
     }
   }
 

@@ -1,0 +1,143 @@
+#widget-hue_scenes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 calc(8 * var(--wu)) calc(20 * var(--wu)) calc(12 * var(--wu));
+  border-top: calc(1 * var(--wu)) solid #1a1a1a;
+  overflow: visible;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Skeleton ── */
+.widget-skeleton-hue-scenes {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  padding-block: calc(10 * var(--wu));
+}
+
+.widget-skeleton-hue-scenes .sk-scenes {
+  width: calc(48 * var(--wu));
+  height: 100%;
+  border-radius: calc(24 * var(--wu));
+  background: #111;
+  position: relative;
+  overflow: hidden;
+}
+
+.widget-skeleton-hue-scenes .sk-scenes::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  transform: translateX(-100%);
+  animation: loading-shimmer 1.6s infinite;
+}
+
+@keyframes loading-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ── Scenes list container ── */
+.hue-scenes-outer {
+  width: 100%;
+  overflow: hidden;
+  height: 100%;
+}
+
+.hue-scenes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(13 * var(--wu));
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-block: calc(10 * var(--wu));
+  scroll-snap-type: y mandatory;
+}
+
+.hue-scenes::-webkit-scrollbar {
+  display: none;
+}
+
+.scene-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(5 * var(--wu));
+  flex-shrink: 0;
+  height: calc(95 * var(--wu));
+  justify-content: flex-start;
+  scroll-snap-align: center;
+}
+
+.scene-btn {
+  width: calc(50 * var(--wu));
+  height: calc(50 * var(--wu));
+  border-radius: 50%;
+  border: calc(4 * var(--wu)) solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    var(--g) border-box;
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 calc(2 * var(--wu)) calc(6 * var(--wu)) rgba(0, 0, 0, 0.4);
+}
+
+.scene-btn:active {
+  transform: scale(0.88);
+}
+
+.scene-btn:not(.active) {
+  opacity: 0.5;
+}
+
+.scene-btn.active {
+  opacity: 1;
+  border-width: calc(6 * var(--wu));
+}
+
+.scene-name {
+  font-size: calc(11 * var(--wu));
+  font-weight: 500;
+  color: #555;
+  text-align: center;
+  width: calc(100 * var(--wu));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.scene-btn.active ~ .scene-name {
+  color: #eee;
+}
+
+.scene-room {
+  font-size: calc(10 * var(--wu));
+  font-weight: 400;
+  color: #383838;
+  text-align: center;
+  width: calc(100 * var(--wu));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-top: calc(-2 * var(--wu));
+  transition: color 0.2s;
+}
+
+.scene-btn.active ~ .scene-room {
+  color: #aaa;
+}

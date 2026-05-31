@@ -694,7 +694,12 @@ class WeatherWidget {
       dd.classList.add('dd-closing');
       rel?.classList.remove('dd-open');
       const done = () => { dd.classList.remove('dd-closing'); dd.removeEventListener('transitionend', done); };
-      dd.addEventListener('transitionend', done);
+      const hasTransition = parseFloat(getComputedStyle(dd).transitionDuration) > 0;
+      if (hasTransition) {
+        dd.addEventListener('transitionend', done);
+      } else {
+        done();
+      }
     };
 
     const ddOpen = () => {
@@ -951,17 +956,9 @@ class WeatherWidget {
     htmlTip.innerHTML = '';
     htmlTip.append(tipValHtml, tipTimeHtml);
 
-    const overlay = document.createElementNS(ns, 'rect');
-    overlay.setAttribute('x', L); overlay.setAttribute('y', T);
-    overlay.setAttribute('width', W - L - R); overlay.setAttribute('height', cH);
-    overlay.setAttribute('fill', 'transparent');
-    overlay.style.touchAction = 'none'; // Prevents page scrolling when touching graph
-    svg.appendChild(overlay);
-
-    const show = (clientX) => {
+    const show = (svgX) => {
       const rect   = svg.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
-      const svgX   = (clientX - rect.left) * (W / rect.width);
       const pt     = points.reduce((b, p) => Math.abs(p.svgX - svgX) < Math.abs(b.svgX - svgX) ? p : b);
       const valStr  = pt.formatVal(pt.val);
       const timeStr = pt.timeLabel;
@@ -991,25 +988,59 @@ class WeatherWidget {
       htmlTip.classList.remove('active');
     };
 
-    let isScrubbing = false;
-    overlay.addEventListener('pointerdown', e => { 
-      isScrubbing = true;
-      overlay.setPointerCapture(e.pointerId); 
-      show(e.clientX); 
-      e.stopPropagation(); 
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = W.toString();
+    slider.step = '1';
+    slider.value = (W / 2).toString();
+    slider.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: ew-resize;
+      margin: 0;
+      z-index: 20;
+    `;
+    wrap.appendChild(slider);
+
+    // Show tooltip on drag (native slider input)
+    slider.addEventListener('input', e => {
+      show(Number(e.target.value));
+      e.stopPropagation();
     });
-    overlay.addEventListener('pointermove', e => { 
-      if (isScrubbing) show(e.clientX); 
-      e.stopPropagation(); 
+
+    // Show tooltip on hover (IR frame acts as cursor)
+    slider.addEventListener('pointermove', e => {
+      if (e.buttons === 0) {
+        const rect = slider.getBoundingClientRect();
+        const svgX = ((e.clientX - rect.left) / rect.width) * W;
+        show(svgX);
+      }
+      e.stopPropagation();
     });
-    const stopScrubbing = e => { 
-      isScrubbing = false; 
-      hide(); 
-      if (e) e.stopPropagation(); 
-    };
-    overlay.addEventListener('pointerup', stopScrubbing);
-    overlay.addEventListener('pointerleave', stopScrubbing);
-    overlay.addEventListener('pointercancel', stopScrubbing);
+
+    slider.addEventListener('pointerdown', e => {
+      // Native slider will handle value update and fire 'input', 
+      // but we might want to also calculate hover explicitly if needed
+      const rect = slider.getBoundingClientRect();
+      const svgX = ((e.clientX - rect.left) / rect.width) * W;
+      show(svgX);
+      e.stopPropagation();
+    });
+
+    slider.addEventListener('pointerleave', e => {
+      hide();
+      if (e) e.stopPropagation();
+    });
+
+    slider.addEventListener('pointercancel', e => {
+      hide();
+      if (e) e.stopPropagation();
+    });
   }
 
   // ── Forecast (non-today) detail panel ─────────────────────────────────────

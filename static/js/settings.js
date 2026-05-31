@@ -446,7 +446,8 @@ const WIDGET_META = {
   datetime: { label: 'Clock',    color: '#1a2a4a' },
   weather:  { label: 'Weather',  color: '#1a3a2a' },
   calendar: { label: 'Calendar', color: '#3a3a1a' },
-  hue:      { label: 'Hue',      color: '#3a1a3a' },
+  hue:      { label: 'Hue Cards', color: '#3a1a3a' },
+  hue_scenes: { label: 'Hue Scenes', color: '#5a1a5a' },
   news:     { label: 'Ticker',   color: '#1a2a3a' },
 };
 const GRID_COLS = 12, GRID_ROWS = 24;
@@ -775,7 +776,12 @@ async function _loadSystemSection(inner) {
           <div class="field">
             <label>End Mirror Process</label>
             <button id="btn-end-process" class="secondary-btn" style="color:#FF9F0A;border-color:#FF9F0A55">End Process</button>
-            <span class="hint">Exits the server process. The mirror display will go offline.</span>
+            <span class="hint">Closes the kiosk window and exits the server. The mirror goes offline.</span>
+          </div>
+          <div class="field">
+            <label>Reboot Pi</label>
+            <button id="btn-system-reboot" class="secondary-btn" style="color:#BF5AF2;border-color:#BF5AF255">Reboot</button>
+            <span class="hint">Restarts the Raspberry Pi. The mirror will come back online after reboot.</span>
           </div>
           <div class="field">
             <label>Shut Down Pi</label>
@@ -790,9 +796,14 @@ async function _loadSystemSection(inner) {
       showToast('Hard reload sent to mirror');
     });
     document.getElementById('btn-end-process')?.addEventListener('click', async () => {
-      if (!confirm('End the mirror server process? The display will go offline.')) return;
+      if (!confirm('End the mirror process? The kiosk window will close and the display will go offline.')) return;
       showToast('Ending process…');
       try { await fetch('/api/reboot', { method: 'POST' }); } catch {}
+    });
+    document.getElementById('btn-system-reboot')?.addEventListener('click', async () => {
+      if (!confirm('Reboot the Raspberry Pi? The mirror will come back online after reboot.')) return;
+      showToast('Rebooting…');
+      try { await fetch('/api/system-reboot', { method: 'POST' }); } catch {}
     });
     document.getElementById('btn-shutdown')?.addEventListener('click', async () => {
       if (!confirm('Shut down the Raspberry Pi? You will need to physically power it back on.')) return;

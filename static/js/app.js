@@ -53,7 +53,6 @@ async function _tryFetchJson(url) {
     if (prefetchedData[w] && widgets[w] && typeof widgets[w].render === 'function') {
       widgets[w].render(prefetchedData[w]);
       widgets[w]._rendered = true;
-      widgets[w]._lastDataJson = JSON.stringify(prefetchedData[w]);
     } else if (w !== 'datetime') {
       restNeeded.push(w);
     }
@@ -70,7 +69,6 @@ async function _tryFetchJson(url) {
         if (_isWidgetHidden(widget)) continue;
         widgets[widget].render(data);
         widgets[widget]._rendered = true;
-        widgets[widget]._lastDataJson = JSON.stringify(data);
       }
     }
   }
@@ -149,7 +147,7 @@ function applyDisplay(display) {
   const gfx = display.graphics || 'high';
   document.body.classList.remove('gfx-high', 'gfx-mid', 'gfx-low');
   document.body.classList.add(`gfx-${gfx}`);
-  document.body.style.cursor = display.show_cursor ? 'default' : 'none';
+  document.body.classList.toggle('show-cursor', !!display.show_cursor);
 }
 
 // ── Reveal mirror after layout is ready ───────────────────────────────────────
@@ -188,22 +186,12 @@ window.activeWidgets.forEach(w => {
       return;
     }
 
-    // Phase 3a: Skip if data hasn't changed (avoids redundant DOM rebuilds)
-    const newJson = JSON.stringify(data);
-    if (widget._lastDataJson === newJson) return;
-    widget._lastDataJson = newJson;
-
-    if (!widget._rendered) {
-      if (typeof widget.render === 'function') {
-        widget.render(data);
-        widget._rendered = true;
-      }
-    } else {
-      if (typeof widget.update === 'function') {
-        widget.update(data);
-      } else if (typeof widget.render === 'function') {
-        widget.render(data);
-      }
+    // Route to update() for subsequent pushes (diff-aware), render() for first
+    if (widget._rendered && typeof widget.update === 'function') {
+      widget.update(data);
+    } else if (typeof widget.render === 'function') {
+      widget.render(data);
+      widget._rendered = true;
     }
   });
 });
@@ -271,6 +259,20 @@ btnRing.addEventListener('click', () => {
 const btnRefresh = document.getElementById('btn-refresh');
 btnRefresh.addEventListener('click', async () => {
   btnRefresh.classList.add('active');
+
+  for (const w of window.activeWidgets) {
+    if (!_isWidgetHidden(w)) {
+      const widget = widgets[w];
+      if (widget) {
+        widget._rendered = false;
+        widget._pendingData = null;
+        if (typeof widget._showSkeleton === 'function') {
+          widget._showSkeleton();
+        }
+      }
+    }
+  }
+
   try {
     await fetch('/api/refresh', { method: 'POST' });
   } finally {
@@ -280,46 +282,109 @@ btnRefresh.addEventListener('click', async () => {
 
 // ── Layout switcher ───────────────────────────────────────────────────────────
 document.getElementById('btn-layout').addEventListener('click', () => {
-  _currentIdx = (_currentIdx + 1) % _templateKeys.length;
-  _applyTemplate(_currentIdx);
+  const mirror = document.getElementById('mirror');
+  mirror.style.opacity = '0';
 
-  // Phase 4d: Render any widgets that were hidden and now visible
-  for (const w of window.activeWidgets) {
-    const widget = widgets[w];
-    if (!widget || !widget._pendingData) continue;
-    if (!_isWidgetHidden(w)) {
-      if (typeof widget.render === 'function') {
-        widget.render(widget._pendingData);
-        widget._rendered = true;
-        widget._lastDataJson = JSON.stringify(widget._pendingData);
+  setTimeout(() => {
+    _currentIdx = (_currentIdx + 1) % _templateKeys.length;
+    _applyTemplate(_currentIdx);
+
+    // Phase 4d: Render any widgets that were hidden and now visible
+    for (const w of window.activeWidgets) {
+      const widget = widgets[w];
+      if (!widget || _isWidgetHidden(w)) continue;
+
+      if (widget._pendingData) {
+        if (typeof widget.render === 'function') {
+          widget.render(widget._pendingData);
+          widget._rendered = true;
+        }
+        widget._pendingData = null;
+      } else if (!widget._rendered && typeof widget._showSkeleton === 'function') {
+        widget._showSkeleton();
       }
-      widget._pendingData = null;
     }
-  }
+
+    // Wait a tiny frame for layout adjustment and ResizeObserver --wu calculations to complete
+    setTimeout(() => {
+      mirror.style.opacity = '1';
+    }, 60);
+  }, 220); // Matches the new fast opacity transition duration
 });
 
 // ── Widget scale (fonts, icons, padding) track grid cell size ─────────────────
 // Phase 3c: Debounced ResizeObserver — avoids rapid-fire --wu recalculations
+const WIDGET_REFS = {
+  datetime: { cols: 6, rows: 3 },
+  news:     { cols: 12, rows: 1 },
+  weather:  { cols: 6, rows: 9 },
+  calendar: { cols: 6, rows: 9 },
+  hue:      { cols: 7, rows: 8 },
+  hue_scenes: { cols: 1.5, rows: 8 }
+};
+
 let _scaleRafId = null;
+let _scaleRo = null;
+
+function applyAllScales() {
+  const scale = _displayConfig.ui_scale ?? 360;
+  const mirror = document.getElementById('mirror') || document.body;
+  const mw = mirror.clientWidth;
+  const mh = mirror.clientHeight;
+  const mm = Math.max(1, Math.min(mw, mh));
+  const globalWu = mm / scale;
+  
+  document.documentElement.style.setProperty('--wu', `${globalWu}px`);
+
+  const colWidth = mw / 12;
+  const rowHeight = 80;
+
+  window.activeWidgets.forEach(w => {
+    const widgetEl = document.getElementById(`widget-${w}`);
+    if (!widgetEl) return;
+
+    const ref = WIDGET_REFS[w];
+    if (ref) {
+      const W_ref = ref.cols * colWidth;
+      const H_ref = ref.rows * rowHeight;
+      const W_cur = widgetEl.clientWidth;
+      const H_cur = widgetEl.clientHeight;
+
+      let ratio = 1.0;
+      if (W_ref > 0 && H_ref > 0 && W_cur > 0 && H_cur > 0) {
+        if (w === 'hue' || w === 'hue_scenes') {
+          ratio = H_cur / H_ref;
+        } else {
+          ratio = Math.min(W_cur / W_ref, H_cur / H_ref);
+        }
+      }
+      const localWu = ratio * globalWu;
+      widgetEl.style.setProperty('--wu', `${localWu}px`);
+    } else {
+      widgetEl.style.setProperty('--wu', `${globalWu}px`);
+    }
+  });
+}
+
 function initWidgetScale() {
-  const setWu = (el) => {
-    const w = el.clientWidth;
-    const h = el.dataset.wuBase ? parseInt(el.dataset.wuBase) : el.clientHeight;
-    const m = Math.max(1, Math.min(w, h));
-    const scale = _displayConfig.ui_scale ?? 360;
-    el.style.setProperty('--wu', `${m / scale}px`);
-  };
-  const ro = new ResizeObserver(entries => {
-    if (_scaleRafId) return; // Debounce: one rAF at a time
-    _scaleRafId = requestAnimationFrame(() => {
-      _scaleRafId = null;
-      for (const entry of entries) setWu(entry.target);
+  const mirror = document.getElementById('mirror') || document.body;
+  applyAllScales();
+
+  if (!_scaleRo) {
+    _scaleRo = new ResizeObserver(() => {
+      if (_scaleRafId) return;
+      _scaleRafId = requestAnimationFrame(() => {
+        _scaleRafId = null;
+        applyAllScales();
+      });
     });
-  });
-  document.querySelectorAll('#mirror > .widget').forEach((el) => {
-    setWu(el);
-    ro.observe(el);
-  });
+    
+    _scaleRo.observe(mirror);
+    window.activeWidgets.forEach(w => {
+      const el = document.getElementById(`widget-${w}`);
+      if (el) _scaleRo.observe(el);
+    });
+  }
 }
 initWidgetScale();
 

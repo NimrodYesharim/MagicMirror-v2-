@@ -213,15 +213,42 @@ class CalendarWidget {
       this.el.innerHTML = `<div class="cal-empty">No upcoming events</div>`;
       return;
     }
-    // Group by start date — no fake entries for intermediate days
-    const byDay = new Map();
+    // Separate multi-day all-day events from single-day events
+    const multiDayEvents = [];
+    const singleEvents = [];
     for (const e of this.events) {
+      if (e.all_day && this._spanDays(e).length > 1) {
+        multiDayEvents.push(e);
+      } else {
+        singleEvents.push(e);
+      }
+    }
+
+    // Group single-day events by start date
+    const byDay = new Map();
+    for (const e of singleEvents) {
       const key = (e.start || '').slice(0, 10);
       if (!byDay.has(key)) byDay.set(key, []);
       byDay.get(key).push(e);
     }
-    const sorted = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
-    this.el.innerHTML = sorted.map(([date, group]) => this._dayHTML(date, group)).join('');
+
+    // Build render list: each entry is { sortKey, html }
+    const entries = [];
+
+    // Add single-day groups
+    for (const [date, group] of byDay.entries()) {
+      entries.push({ sortKey: date, html: this._dayHTML(date, group) });
+    }
+
+    // Add multi-day events as individual isolated groups
+    for (const e of multiDayEvents) {
+      const startDate = (e.start || '').slice(0, 10);
+      entries.push({ sortKey: startDate, html: this._dayHTML(startDate, [e]) });
+    }
+
+    // Sort all groups chronologically
+    entries.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    this.el.innerHTML = entries.map(e => e.html).join('');
     this._initMarquees();
   }
 
@@ -248,12 +275,16 @@ class CalendarWidget {
   }
 
   _initMarquees() {
-    setTimeout(() => {
-      // Batch all reads first, then all writes — avoids layout thrash per element
+    // Wait for layout to stabilize before measuring text overflow.
+    // Use rAF + timeout to ensure Chromium has painted; retry once for slow Pi GPUs.
+    const measure = () => {
       const overflows = [];
       this.el.querySelectorAll('.cal-title, .cal-loc-part').forEach(el => {
         const span = el.querySelector('span');
         if (!span) return;
+        // Skip if already set up
+        if (span.classList.contains('animate-marquee-ltr') ||
+            span.classList.contains('animate-marquee-rtl')) return;
         const diff = span.offsetWidth - el.offsetWidth;
         if (diff > 0) overflows.push({ el, span, diff });
       });
@@ -265,7 +296,11 @@ class CalendarWidget {
         span.style.setProperty('--dur', `${dur}s`);
         span.classList.add(isRtl ? 'animate-marquee-rtl' : 'animate-marquee-ltr');
       }
-    }, 120);
+    };
+    // First pass after paint + 200ms settle time
+    requestAnimationFrame(() => setTimeout(measure, 200));
+    // Second pass at 1.5s — catches any elements that weren't ready in the first pass
+    setTimeout(measure, 1500);
   }
 
   _dayHTML(date, group) {

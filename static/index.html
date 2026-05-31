@@ -106,6 +106,7 @@
         // Create containers + load CSS for all widgets (non-blocking)
         manifests.forEach(m => {
           const w = m.name;
+          const base = m.basePath || w;
 
           let div = document.createElement('div');
           div.id = `widget-${w}`;
@@ -115,14 +116,15 @@
 
           let link = document.createElement('link');
           link.rel = 'stylesheet';
-          link.href = `/widgets/${w}/${w}.css`;
+          link.href = `/widgets/${base}/${w}.css`;
           document.head.appendChild(link);
         });
 
         // Load ALL widget scripts in parallel
         await Promise.all(manifests.map(m => new Promise(resolve => {
+          const base = m.basePath || m.name;
           let script = document.createElement('script');
-          script.src = `/widgets/${m.name}/${m.name}.js`;
+          script.src = `/widgets/${base}/${m.name}.js`;
           script.async = true;
           script.onload = script.onerror = resolve;
           document.body.appendChild(script);

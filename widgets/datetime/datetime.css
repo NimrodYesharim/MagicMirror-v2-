@@ -2,19 +2,20 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0 calc(56 * var(--wu));
   gap: calc(4 * var(--wu));
+  height: 100%;
+  width: 100%;
 }
 
 .dt-time {
-  font-size: calc(125 * var(--wu));
+  font-size: calc(110 * var(--wu));
   font-weight: 700;
-  letter-spacing: calc(-4 * var(--wu));
+  letter-spacing: calc(-2 * var(--wu));
   line-height: 1;
 }
 
 .dt-date {
-  font-size: calc(41 * var(--wu));
+  font-size: calc(45 * var(--wu));
   font-weight: 300;
   color: #bbb;
   letter-spacing: calc(0.5 * var(--wu));
