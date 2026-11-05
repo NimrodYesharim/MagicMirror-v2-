@@ -150,7 +150,7 @@
 
 .cal-title.rtl {
   direction: rtl;
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Rubik', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 /* Marquee — shared by title and location */
@@ -207,7 +207,7 @@
 
 .cal-loc-part.rtl {
   direction: rtl;
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Rubik', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 /* ── Modal Content ── */
@@ -271,7 +271,7 @@
 
 .cal-modal-content.rtl {
   direction: rtl;
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Rubik', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 .cal-modal-content.rtl .cal-modal-header {

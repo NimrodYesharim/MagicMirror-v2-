@@ -1,0 +1,7 @@
+{
+  "name": "homeassistant",
+  "label": "Home Assistant",
+  "wsType": null,
+  "containerAttrs": {},
+  "settingsOrder": 90
+}

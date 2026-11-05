@@ -131,6 +131,14 @@ else
   echo "[alias] Added 'mirror' alias to ~/.bashrc"
 fi
 
+# ── 7. Color emoji font (Pi OS ships none, so Chromium draws emoji as boxes) ─
+if fc-list | grep -qi "Noto Color Emoji"; then
+  echo "[emoji] Noto Color Emoji already installed — skipping."
+else
+  sudo apt-get install -y fonts-noto-color-emoji && fc-cache -f
+  echo "[emoji] Installed Noto Color Emoji"
+fi
+
 echo ""
 echo "Setup complete!"
 echo "  • MagicMirror starts automatically on boot"
@@ -138,5 +146,6 @@ echo "  • System reboots daily at 04:00 AM"
 echo "  • Desktop shortcut: ~/Desktop/MagicMirror.desktop"
 echo "  • HDMI forced on (display can be off during boot)"
 echo "  • Shell alias: type 'mirror' to start"
+echo "  • Color emoji font installed"
 echo ""
 echo "Reboot to apply all changes:  sudo reboot"

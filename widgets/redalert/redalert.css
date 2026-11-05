@@ -31,7 +31,7 @@
 
 /* "צבע אדום" headline */
 .alert-title {
-  font-family: 'Rubik', 'SFPro', sans-serif;
+  font-family: 'Rubik', 'SFPro', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   font-size: 88px;
   font-weight: 800;
   color: #ff3b30;
@@ -51,7 +51,7 @@
 }
 
 .alert-area {
-  font-family: 'Rubik', 'SFPro', sans-serif;
+  font-family: 'Rubik', 'SFPro', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   font-size: 26px;
   font-weight: 600;
   color: #fff;

@@ -151,7 +151,7 @@ async function loadAll() {
 
   // Merge manifest labels into WIDGET_META for the layout editor
   manifests.forEach(m => {
-    if (!WIDGET_META[m.name]) {
+    if (!WIDGET_META[m.name] && !m.settingsOnly) {
       WIDGET_META[m.name] = { label: m.label || m.name, color: '#2a2a2a' };
     }
   });
@@ -242,7 +242,7 @@ function showSection(key) {
   }
 
   if (isWidget) {
-    content.querySelectorAll('.sub-nav-btn').forEach(btn => {
+    content.querySelectorAll('.sub-nav .sub-nav-btn').forEach(btn => {
       btn.onclick = () => showSection(btn.dataset.widget);
     });
   }

@@ -173,6 +173,10 @@ async def list_widgets():
             # Top-level widget
             if (item / f"{item.name}.js").exists():
                 _load_widget(item)
+            # Integration with settings but no mirror UI (e.g. homeassistant)
+            elif (item / f"{item.name}.settings.js").exists():
+                _load_widget(item)
+                widgets[-1]["settingsOnly"] = True
             # Sub-widgets (e.g. widgets/hue/hue_scenes/)
             for sub in sorted(item.iterdir(), key=lambda p: p.name):
                 if sub.name.startswith("_") or not sub.is_dir():
@@ -217,6 +221,31 @@ class ColorBody(BaseModel):      hue_deg: float; sat_pct: float
 async def hue_pair(request: Request):
     hue = request.app.state.widgets.get("hue")
     return await hue.pair() if hue else {"ok": False}
+
+@app.post("/api/display/power")
+async def display_power(body: PowerBody, request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    return {"ok": bool(ha) and await ha.set_display(body.on)}
+
+@app.get("/api/homeassistant/status")
+async def homeassistant_status(request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    return await ha.status() if ha else {"state": "unreachable", "detail": "integration not loaded"}
+
+@app.post("/api/homeassistant/scan")
+async def homeassistant_scan(request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    return await ha.scan() if ha else []
+
+@app.get("/api/homeassistant/entities")
+async def homeassistant_entities(request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    if not ha:
+        raise HTTPException(status_code=503, detail="Home Assistant integration not loaded")
+    try:
+        return await ha.list_entities()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 @app.put("/api/hue/room/{gl_id}/power")
 async def hue_power(gl_id: str, body: PowerBody, request: Request):

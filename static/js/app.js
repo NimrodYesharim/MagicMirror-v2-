@@ -106,7 +106,6 @@ function _applyTemplate(idx) {
   if (template.ui_scale) {
     _displayConfig.ui_scale = template.ui_scale;
   }
-  initWidgetScale();
 
   for (const [name, pos] of Object.entries(template.widgets || {})) {
     const el = document.getElementById(`widget-${name}`);
@@ -117,6 +116,9 @@ function _applyTemplate(idx) {
     const hidden = (pos.row === '1 / 1');
     el.style.visibility = hidden ? 'hidden' : 'visible';
   }
+
+  // Scale after positions are set, so --wu matches the new cells in the same frame
+  initWidgetScale();
 }
 
 // Phase 4d: Check if a widget is hidden in the current layout template
@@ -238,6 +240,11 @@ const btnSleep     = document.getElementById('btn-sleep');
 function setSleep(on) {
   sleepOverlay.classList.toggle('hidden', !on);
   btnSleep.classList.toggle('active', on);
+  // Black overlay stays as fallback if Home Assistant is unreachable
+  fetch('/api/display/power', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ on: !on }),
+  }).catch(() => {});
 }
 
 btnSleep.addEventListener('click', () => setSleep(sleepOverlay.classList.contains('hidden')));
@@ -286,6 +293,8 @@ document.getElementById('btn-layout').addEventListener('click', () => {
   mirror.style.opacity = '0';
 
   setTimeout(() => {
+    // Child transitions would animate the resize (the "shrink to top-left") — off while hidden
+    document.body.classList.add('layout-switching');
     _currentIdx = (_currentIdx + 1) % _templateKeys.length;
     _applyTemplate(_currentIdx);
 
@@ -305,10 +314,14 @@ document.getElementById('btn-layout').addEventListener('click', () => {
       }
     }
 
-    // Wait a tiny frame for layout adjustment and ResizeObserver --wu calculations to complete
-    setTimeout(() => {
+    // Widgets that fit content to their size do it now instead of after their debounced observers
+    for (const w of window.activeWidgets) widgets[w]?.relayout?.();
+
+    // Two frames: the new layout is painted (hidden) before the fade-in starts
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.body.classList.remove('layout-switching');
       mirror.style.opacity = '1';
-    }, 60);
+    }));
   }, 220); // Matches the new fast opacity transition duration
 });
 
@@ -334,21 +347,22 @@ function applyAllScales() {
   const mm = Math.max(1, Math.min(mw, mh));
   const globalWu = mm / scale;
   
-  document.documentElement.style.setProperty('--wu', `${globalWu}px`);
-
   const colWidth = mw / 12;
   const rowHeight = 80;
 
-  window.activeWidgets.forEach(w => {
-    const widgetEl = document.getElementById(`widget-${w}`);
-    if (!widgetEl) return;
+  // Read every widget size before writing any --wu: one layout pass instead of one per widget
+  const sizes = window.activeWidgets.map(w => {
+    const el = document.getElementById(`widget-${w}`);
+    return el && [w, el, el.clientWidth, el.clientHeight];
+  }).filter(Boolean);
 
+  document.documentElement.style.setProperty('--wu', `${globalWu}px`);
+
+  sizes.forEach(([w, widgetEl, W_cur, H_cur]) => {
     const ref = WIDGET_REFS[w];
     if (ref) {
       const W_ref = ref.cols * colWidth;
       const H_ref = ref.rows * rowHeight;
-      const W_cur = widgetEl.clientWidth;
-      const H_cur = widgetEl.clientHeight;
 
       let ratio = 1.0;
       if (W_ref > 0 && H_ref > 0 && W_cur > 0 && H_cur > 0) {

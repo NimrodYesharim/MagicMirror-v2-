@@ -6,7 +6,7 @@
   border-top: calc(1 * var(--wu)) solid #1a1a1a;
   height: 100%;
   width: 100%;
-  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
 }
 
 /* ── Wide / infinite-scroll mode ── */
@@ -218,7 +218,7 @@
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
   transform: translateY(16px);
   transition: transform 0.25s ease;
-  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   touch-action: pan-y;
 }
 

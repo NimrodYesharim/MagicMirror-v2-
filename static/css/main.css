@@ -29,7 +29,7 @@ html, body {
   overflow: hidden;
   background: #000;
   color: #fff;
-  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'SFPro', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* cursor controlled via .show-cursor class above */
@@ -63,6 +63,10 @@ html, body {
   contain: layout;
   /* Prevent gfx-low global transition-duration from animating grid repositioning */
   transition-property: opacity !important;
+}
+/* While the mirror is faded out for a layout switch, snap children to their new size */
+body.layout-switching #mirror * {
+  transition: none !important;
 }
 
 /* Loading skeletons — inherit --wu from .widget */
@@ -248,7 +252,7 @@ html, body {
   white-space: nowrap;
   font-size: 14px;
   font-weight: 500;
-  font-family: 'SFPro', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'SFPro', -apple-system, BlinkMacSystemFont, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
   color: #fff;
   background: rgba(28, 28, 30, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);

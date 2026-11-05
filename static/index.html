@@ -92,6 +92,7 @@
     fetch('/api/widgets')
       .then(r => r.json())
       .then(async manifests => {
+        manifests = manifests.filter(m => !m.settingsOnly);  // integrations have no mirror UI
         window.widgetManifests = {};
         manifests.forEach(m => { window.widgetManifests[m.name] = m; });
         window.activeWidgets = manifests.map(m => m.name);

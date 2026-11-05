@@ -96,6 +96,12 @@ class HueWidget {
     });
   }
 
+  // Called by app.js after a layout switch, so cards fit before the fade-in
+  relayout() {
+    if (!this.el.querySelector('.hue-rooms')) return;
+    this._sizeSliders(); this._refreshAllBadges(); this._fitCards();
+  }
+
   _initRoomResize() {
     if (this._roomRO) this._roomRO.disconnect();
     const rooms = this.el.querySelector('.hue-rooms');
