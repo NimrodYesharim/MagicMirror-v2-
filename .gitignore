@@ -60,3 +60,6 @@ venv.bak/
 # System files
 .DS_Store
 Thumbs.db
+
+# Runtime state (rewritten by the weather widget)
+config/weather_observed.json
