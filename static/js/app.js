@@ -321,8 +321,10 @@ document.getElementById('btn-layout').addEventListener('click', () => {
 
     // Two frames: the new layout is painted (hidden) before the fade-in starts
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      document.body.classList.remove('layout-switching');
       mirror.style.opacity = '1';
+      // Dropping the class restyles every widget element (~100 ms on the Pi). Do it once the
+      // fade (a compositor animation, immune to main-thread stalls) is done, not as it starts.
+      setTimeout(() => document.body.classList.remove('layout-switching'), 300);
     }));
   }, 220); // Matches the new fast opacity transition duration
 });
