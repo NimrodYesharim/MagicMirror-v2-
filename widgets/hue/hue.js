@@ -98,17 +98,22 @@ class HueWidget {
 
   // Called by app.js after a layout switch, so cards fit before the fade-in
   relayout() {
-    if (!this.el.querySelector('.hue-rooms')) return;
+    const rooms = this.el.querySelector('.hue-rooms');
+    if (!rooms) return;
     this._sizeSliders(); this._refreshAllBadges(); this._fitCards();
+    this._fittedSize = `${rooms.clientWidth}x${rooms.clientHeight}`;
   }
 
   _initRoomResize() {
     if (this._roomRO) this._roomRO.disconnect();
     const rooms = this.el.querySelector('.hue-rooms');
     if (!rooms) return;
-    this._roomRO = new ResizeObserver(() => {
+    this._roomRO = new ResizeObserver(([entry]) => {
+      // Already fitted at this size (e.g. by relayout() during a layout switch): skip the re-layout
+      const size = `${entry.target.clientWidth}x${entry.target.clientHeight}`;
+      if (size === this._fittedSize) return;
       clearTimeout(this._roTimer);
-      this._roTimer = setTimeout(() => { this._sizeSliders(); this._refreshAllBadges(); this._fitCards(); }, 100);
+      this._roTimer = setTimeout(() => this.relayout(), 100);
     });
     this._roomRO.observe(rooms);
   }

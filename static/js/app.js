@@ -341,6 +341,12 @@ const WIDGET_REFS = {
 let _scaleRafId = null;
 let _scaleRo = null;
 
+// Writing --wu restyles everything under el, even with the same value: skip no-op writes
+function _setWu(el, px) {
+  const v = `${px}px`;
+  if (el.style.getPropertyValue('--wu') !== v) el.style.setProperty('--wu', v);
+}
+
 function applyAllScales() {
   const scale = _displayConfig.ui_scale ?? 360;
   const mirror = document.getElementById('mirror') || document.body;
@@ -358,7 +364,7 @@ function applyAllScales() {
     return el && [w, el, el.clientWidth, el.clientHeight];
   }).filter(Boolean);
 
-  document.documentElement.style.setProperty('--wu', `${globalWu}px`);
+  _setWu(document.documentElement, globalWu);
 
   sizes.forEach(([w, widgetEl, W_cur, H_cur]) => {
     const ref = WIDGET_REFS[w];
@@ -375,9 +381,9 @@ function applyAllScales() {
         }
       }
       const localWu = ratio * globalWu;
-      widgetEl.style.setProperty('--wu', `${localWu}px`);
+      _setWu(widgetEl, localWu);
     } else {
-      widgetEl.style.setProperty('--wu', `${globalWu}px`);
+      _setWu(widgetEl, globalWu);
     }
   });
 }
