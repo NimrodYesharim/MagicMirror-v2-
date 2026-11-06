@@ -644,6 +644,10 @@ def _read_config_safe(path: Path) -> str:
 async def get_config(widget: str):
     path = _get_config_path(widget)
     if not path.exists():
+        # Configs are gitignored: a fresh checkout has the widget but no YAML yet.
+        # Return empty so its settings card still shows and saving creates the file.
+        if path.parent.is_dir():
+            return {}
         raise HTTPException(status_code=404, detail='Config not found')
     return _read_yaml_cached(path)
 

@@ -24,6 +24,8 @@ async function _tryFetchJson(url) {
 }
 
 (async () => {
+  // Run after this whole script has loaded: the layout/scale `let`s below aren't initialized yet
+  await null;
   // Phase 2a: Use server-injected config + widget data if available
   const prefetchedConfig = window.__CONFIG__ || null;
   const prefetchedData   = window.__PREFETCH__ || {};
@@ -135,6 +137,7 @@ let _displayConfig = {};
 function applyDisplay(display) {
   if (!display) return;
   _displayConfig = display;
+  if (_scaleRo) applyAllScales();  // display.ui_scale may have changed
   const ring = document.getElementById('ring-overlay');
   const bw   = display.ring_light?.border_width ?? 120;
   const op   = display.ring_light?.opacity       ?? 0.92;
