@@ -127,7 +127,7 @@ chromium-browser \
   --overscroll-history-navigation=0 \
   --ignore-certificate-errors \
   --allow-insecure-localhost \
-  --user-data-dir=/tmp/kiosk-profile \
+  --user-data-dir="$HOME/.cache/mirror-kiosk" \
   \
   --use-gl=egl \
   --enable-gpu-rasterization \

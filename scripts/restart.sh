@@ -12,8 +12,10 @@ for pat in 'uvicorn server.main' 'chromium-browser' 'bash scripts/start.sh'; do
 done
 sleep 2
 
-# Fresh browser profile: drops the service-worker cache so new JS/CSS load
-rm -rf /tmp/kiosk-profile
+# Drop only the service worker (older versions served cached JS after updates).
+# The rest of the profile stays: it holds the GPU shader cache, which saves ~0.3 s
+# of shader compiling the first time each kind of popup is drawn.
+rm -rf "$HOME/.cache/mirror-kiosk/Default/Service Worker" /tmp/kiosk-profile
 
 export DISPLAY="${DISPLAY:-:0}"
 export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"

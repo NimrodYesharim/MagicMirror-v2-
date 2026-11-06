@@ -1,14 +1,14 @@
-// MagicMirror Service Worker — offline cache + instant reload
-const CACHE_NAME = 'magicmirror-v1';
+// MagicMirror Service Worker — offline fallback cache
+// Network-first for everything: the server is on the same machine, so the network is
+// always fast, and cache-first used to keep serving old JS/CSS after an update.
+const CACHE_NAME = 'magicmirror-v2';
 
-// Core assets to pre-cache on install
 const PRECACHE_URLS = [
   '/css/main.css',
   '/js/app.js',
   '/js/ws.js',
 ];
 
-// Install: cache core assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -17,7 +17,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate: clean old caches
+// Activate: drop old caches (v1 held stale cache-first copies)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -26,41 +26,19 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch: network-first for API/HTML, cache-first for static assets
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
-  // Skip WebSocket, POST, and non-GET requests
   if (event.request.method !== 'GET') return;
   if (url.pathname.startsWith('/ws')) return;
 
-  // API and HTML: network-first (always want fresh data)
-  if (url.pathname.startsWith('/api/') || url.pathname === '/mirror' || url.pathname === '/') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Static assets (JS, CSS, fonts, icons): cache-first
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) {
-        // Background refresh for next time
-        fetch(event.request).then(response => {
-          if (response && response.ok) {
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, response));
-          }
-        }).catch(() => {});
-        return cached;
+    fetch(event.request).then(response => {
+      // Keep a copy of static files for offline fallback (API data changes, so skip it)
+      if (response && response.ok && !url.pathname.startsWith('/api/')) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
       }
-      return fetch(event.request).then(response => {
-        if (response && response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      });
-    })
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
