@@ -104,10 +104,9 @@ function _applyTemplate(idx) {
       widgets.datetime.setShowSeconds(template.show_seconds === true);
   }
 
-  // Apply template-specific scale if set
-  if (template.ui_scale) {
-    _displayConfig.ui_scale = template.ui_scale;
-  }
+  // Scale comes from display.yaml only. Template ui_scale used to be written into
+  // _displayConfig here, so it only applied after a layout switch and then leaked
+  // into every other layout — proportions changed each time you switched.
 
   for (const [name, pos] of Object.entries(template.widgets || {})) {
     const el = document.getElementById(`widget-${name}`);
