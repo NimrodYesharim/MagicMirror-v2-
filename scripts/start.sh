@@ -71,6 +71,46 @@ xset s off
 xset -dpms
 xset s noblank
 
+# ── Portrait screen: rotate in the browser, not in X ─────────────────────────
+# `xrandr --rotate` makes X re-copy the whole screen on every frame — on the Pi 4 that
+# halved the frame rate. So: unrotate X, give touch its raw landscape mapping, and let
+# the page rotate itself (static/js/rotate.js). Restored when the mirror exits.
+# MIRROR_X_ROTATE=1 keeps the old X rotation.
+WIN_SIZE="1080,1920"; URL="https://localhost:$PORT/mirror"
+ROT_STATE=/tmp/mirror-rotation   # survives a crash without restore; /tmp clears on reboot
+if [ "${MIRROR_X_ROTATE:-0}" != "1" ]; then
+  if [ ! -f "$ROT_STATE" ]; then
+    ROT=$(xrandr --query 2>/dev/null | awk '/ connected primary/ {for (i=3;i<=NF;i++) {if ($i ~ /^\(/) break; if ($i=="left"||$i=="right") {print $i; exit}}}')
+    if [ -n "$ROT" ]; then
+      OUTPUT=$(xrandr --query | awk '/ connected primary/ {print $1; exit}')
+      echo "$OUTPUT $ROT" > "$ROT_STATE"
+      for id in $(xinput list --id-only 2>/dev/null); do   # remember rotated touch mappings
+        m=$(xinput list-props "$id" 2>/dev/null | awk -F: '/Coordinate Transformation Matrix/ {gsub(/[ \t]/,"",$2); print $2}')
+        [ -n "$m" ] && [ "$m" != "1.000000,0.000000,0.000000,0.000000,1.000000,0.000000,0.000000,0.000000,1.000000" ] \
+          && echo "$id $m" >> "$ROT_STATE"
+      done
+    fi
+  fi
+  if [ -f "$ROT_STATE" ]; then
+    read -r OUTPUT ROT < "$ROT_STATE"
+    restore_rotation() {
+      xrandr --output "$OUTPUT" --rotate "$ROT"
+      tail -n +2 "$ROT_STATE" | while read -r id m; do
+        xinput set-prop "$id" "Coordinate Transformation Matrix" ${m//,/ }
+      done
+      rm -f "$ROT_STATE"
+    }
+    trap restore_rotation EXIT
+    trap 'exit 0' INT TERM
+    xrandr --output "$OUTPUT" --rotate normal
+    tail -n +2 "$ROT_STATE" | while read -r id m; do
+      xinput set-prop "$id" "Coordinate Transformation Matrix" 1 0 0 0 1 0 0 0 1
+    done
+    WIN_SIZE="1920,1080"; URL="$URL?rotate=$ROT"
+    echo "Portrait via browser rotation ($ROT) — X unrotated"
+  fi
+fi
+
 # ── Launch Chromium in kiosk mode ─────────────────────────────────────────────
 chromium-browser \
   --kiosk \
@@ -80,7 +120,7 @@ chromium-browser \
   --disable-restore-session-state \
   --no-first-run \
   --window-position=0,0 \
-  --window-size=1080,1920 \
+  --window-size="$WIN_SIZE" \
   --force-device-scale-factor=1 \
   --touch-events=enabled \
   --disable-pinch \
@@ -104,6 +144,6 @@ chromium-browser \
   --enable-features=CanvasOopRasterization \
   --disable-lcd-text \
   ${MIRROR_DEBUG:+--remote-debugging-port=9222} \
-  "https://localhost:$PORT"
+  "$URL"
 
 kill $SERVER_PID

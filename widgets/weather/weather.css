@@ -450,8 +450,8 @@
 
 #modal-card.wx-today-card {
   padding: 22px 28px 30px;
-  max-height: 95vh;
-  width: min(800px, 96vw);
+  max-height: 1824px; /* 95% of the 1920px page */
+  width: 800px; /* was min(800px, 96vw); the page is always 1080px wide */
 }
 
 /* Fix var(--wu) icon sizes to px inside the today card graph section */

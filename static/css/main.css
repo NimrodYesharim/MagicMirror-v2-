@@ -36,6 +36,16 @@ html, body {
   user-select: none;
 }
 
+/* Browser-side rotation (?rotate=right|left, see js/rotate.js): X stays landscape, the
+   portrait body is rotated into it. body becomes the containing block for fixed overlays. */
+html.rotate-right, html.rotate-left { width: 1920px; height: 1080px; }
+html.rotate-right body, html.rotate-left body {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0;
+}
+html.rotate-right body { transform: translateX(1920px) rotate(90deg); }
+html.rotate-left body  { transform: translateY(1080px) rotate(-90deg); }
+
 /* ── Mirror grid ── */
 #mirror {
   position: absolute;

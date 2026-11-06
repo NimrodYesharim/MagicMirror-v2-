@@ -214,7 +214,7 @@
   border-radius: 18px;
   max-width: 640px;
   width: calc(100% - 40px);
-  max-height: 88vh;
+  max-height: 1690px; /* 88% of the 1920px page */
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
   transform: translateY(16px);
   transition: transform 0.25s ease;
