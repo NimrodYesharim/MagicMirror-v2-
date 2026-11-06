@@ -336,7 +336,8 @@ body.layout-switching #mirror * {
 
 body.modal-open #mirror {
   filter: brightness(0.5);
-  pointer-events: none;
+  /* No pointer-events here: it's inherited, so toggling it restyled all ~770 widget
+     elements (~180 ms on the Pi). The open #modal-overlay already catches every tap. */
   transition: filter 0.3s ease;
 }
 
