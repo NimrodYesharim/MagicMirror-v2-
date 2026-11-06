@@ -289,7 +289,10 @@ body.layout-switching #mirror * {
 /* Alert overlay styles live in css/widgets/redalert.css */
 
 #modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
+  /* Darkens the mirror behind a popup. Was 0.5 here plus filter:brightness(0.5) on #mirror;
+     the filter re-rendered the whole screen offscreen every frame on the Pi. One overlay at
+     the combined strength looks identical: 1 - 0.5 x (1 - 0.5) = 0.75. */
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -334,12 +337,8 @@ body.layout-switching #mirror * {
   transition: opacity 0.35s ease-out;
 }
 
-body.modal-open #mirror {
-  filter: brightness(0.5);
-  /* No pointer-events here: it's inherited, so toggling it restyled all ~770 widget
-     elements (~180 ms on the Pi). The open #modal-overlay already catches every tap. */
-  transition: filter 0.3s ease;
-}
+/* (No body.modal-open #mirror rule: pointer-events there is inherited, so toggling it
+   restyled all ~770 widget elements; the open #modal-overlay already catches every tap.) */
 
 /* ── Hebrew / RTL ── */
 /* ── Graphics quality tiers ─────────────────────────────────────────────────
@@ -360,8 +359,8 @@ body.gfx-low .radial-label {
 body.gfx-low #modal-card {
   background: rgba(18, 18, 18, 0.98);
 }
-body.gfx-low.modal-open #mirror {
-  filter: brightness(0.45);
+body.gfx-low #modal-overlay {
+  background: rgba(0, 0, 0, 0.775); /* = brightness(0.45) under the 0.5 overlay */
 }
 body.gfx-low .skeleton-block {
   animation: none;
@@ -378,7 +377,7 @@ body.gfx-low .radial-item {
 body.gfx-mid #modal-overlay.open {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.7); /* = 0.4 overlay + brightness(0.5) */
 }
 body.gfx-mid #modal-overlay.open #modal-card {
   backdrop-filter: blur(20px) saturate(180%);
@@ -405,7 +404,7 @@ body.gfx-high .radial-label {
 body.gfx-high #modal-overlay.open {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.7); /* = 0.4 overlay + brightness(0.5) */
 }
 body.gfx-high #modal-overlay.open #modal-card {
   backdrop-filter: blur(25px) saturate(180%);
