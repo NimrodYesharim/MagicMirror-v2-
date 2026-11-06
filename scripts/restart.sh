@@ -1,6 +1,7 @@
 #!/bin/bash
 # Restart the mirror (server + kiosk Chromium) — safe to run over SSH.
 # Usage: bash scripts/restart.sh
+#        MIRROR_DEBUG=1 bash scripts/restart.sh   # + Chromium DevTools on 127.0.0.1:9222 (profiling)
 cd "$(dirname "$0")/.." || exit 1
 
 # Stop by PID so this script's own command line can never match a kill pattern

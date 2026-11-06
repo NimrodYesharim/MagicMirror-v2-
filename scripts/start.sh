@@ -103,7 +103,7 @@ chromium-browser \
   --disable-renderer-backgrounding \
   --enable-features=CanvasOopRasterization \
   --disable-lcd-text \
-  \
+  ${MIRROR_DEBUG:+--remote-debugging-port=9222} \
   "https://localhost:$PORT"
 
 kill $SERVER_PID
