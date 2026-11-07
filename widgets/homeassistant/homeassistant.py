@@ -8,6 +8,7 @@ Config: widgets/homeassistant/homeassistant.yaml (edited from /settings)
 """
 import asyncio
 import socket
+import time
 import httpx
 import yaml
 from pathlib import Path
@@ -15,9 +16,32 @@ from pathlib import Path
 CONFIG_PATH = Path("widgets/homeassistant/homeassistant.yaml")
 # Entity domains that can power a display on/off via homeassistant.turn_on/turn_off
 TOGGLE_DOMAINS = ("switch", "light", "input_boolean", "fan")
+POLL_SECONDS = 5
 
 
 class HomeAssistantService:
+    def __init__(self):
+        self._display_on = None   # last known state of the display device (None = unknown)
+        self._hold_until = 0.0    # ignore polls right after we switched it (HA state lags the command)
+
+    def get_cached(self):
+        return None if self._display_on is None else {"on": self._display_on}
+
+    async def _poll_loop(self, ws_manager):
+        """Follow the display device so an off from HA (automation, app) puts the mirror to sleep."""
+        while True:
+            await asyncio.sleep(POLL_SECONDS)
+            entity = self.config.get("display_switch")
+            if not entity or time.monotonic() < self._hold_until:
+                continue
+            try:
+                on = (await self._request("GET", f"/api/states/{entity}"))["state"] == "on"
+            except Exception:
+                continue  # HA unreachable: keep the mirror as it is
+            if on != self._display_on:
+                self._display_on = on
+                await ws_manager.broadcast({"type": "display_power", "data": {"on": on}})
+
     @property
     def config(self) -> dict:
         # Read per call so settings changes apply without a restart (tiny file, rare calls)
@@ -49,12 +73,14 @@ class HomeAssistantService:
             return {"state": "unreachable", "detail": type(e).__name__}
 
     async def scan(self, port: int = 8123) -> list[dict]:
-        """Find Home Assistant servers on this machine's /24 subnet (and localhost) by probing `port`."""
+        """Find Home Assistant servers on this machine's /24 subnet by probing `port`."""
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.connect(("10.255.255.255", 1))  # UDP connect sends nothing; just picks the LAN interface
-            prefix = s.getsockname()[0].rsplit(".", 1)[0]
+            own_ip = s.getsockname()[0]
+        prefix = own_ip.rsplit(".", 1)[0]
         # shortcut: assumes a /24 LAN, upgrade to netmask-based ranges if the network is larger
-        hosts = ["127.0.0.1"] + [f"{prefix}.{i}" for i in range(1, 255)]
+        # This machine is found by its LAN IP (not localhost), so it's listed once and matches saved URLs
+        hosts = [f"{prefix}.{i}" for i in range(1, 255)]
 
         async def probe(host):
             try:
@@ -70,8 +96,7 @@ class HomeAssistantService:
                     return None
             except Exception:
                 return None
-            return {"host": "localhost" if host == "127.0.0.1" else host, "port": port,
-                    "name": "This mirror" if host == "127.0.0.1" else "Home Assistant"}
+            return {"host": host, "port": port, "name": "This mirror" if host == own_ip else "Home Assistant"}
 
         return [r for r in await asyncio.gather(*(probe(h) for h in hosts)) if r]
 
@@ -90,6 +115,8 @@ class HomeAssistantService:
         try:
             await self._request("POST", f"/api/services/homeassistant/{'turn_on' if on else 'turn_off'}",
                                 json={"entity_id": entity})
+            self._display_on = on
+            self._hold_until = time.monotonic() + 5
             return True
         except Exception as e:
             print(f"[homeassistant] Display {'on' if on else 'off'} ({entity}) failed: {e}")
@@ -97,4 +124,7 @@ class HomeAssistantService:
 
 
 async def register(app, ws_manager):
-    app.state.widgets["homeassistant"] = HomeAssistantService()
+    svc = HomeAssistantService()
+    app.state.widgets["homeassistant"] = svc
+    ws_manager.register_state_provider("display_power", svc.get_cached)
+    asyncio.create_task(svc._poll_loop(ws_manager))

@@ -185,7 +185,7 @@ window.activeWidgets.forEach(w => {
     if (!widget) return;
 
     // Phase 4d: Skip rendering for hidden widgets — store data for later
-    if (_isWidgetHidden(w)) {
+    if (_isWidgetHidden(w) || _sleeping) {
       widget._pendingData = data;
       return;
     }
@@ -239,9 +239,32 @@ document.addEventListener('click', closeMenu);
 const sleepOverlay = document.getElementById('sleep-overlay');
 const btnSleep     = document.getElementById('btn-sleep');
 
-function setSleep(on) {
+let _sleeping = false;
+
+// Local sleep state only. While asleep nothing is painted and WS data is parked in _pendingData.
+function applySleep(on) {
+  if (on === _sleeping) return;
+  _sleeping = on;
+  document.body.classList.toggle('sleeping', on);
   sleepOverlay.classList.toggle('hidden', !on);
   btnSleep.classList.toggle('active', on);
+  if (on) return;
+  // Waking: draw the latest data now, while the display spends ~3 s powering up
+  for (const w of window.activeWidgets) {
+    const widget = widgets[w];
+    if (!widget || !widget._pendingData || _isWidgetHidden(w)) continue;
+    const data = widget._pendingData;
+    widget._pendingData = null;
+    if (widget._rendered && typeof widget.update === 'function') widget.update(data);
+    else if (typeof widget.render === 'function') { widget.render(data); widget._rendered = true; }
+  }
+}
+
+// Display switched from Home Assistant (automation, app): follow it; a tap on the overlay wakes it
+WS.on('display_power', ({ on }) => applySleep(!on));
+
+function setSleep(on) {
+  applySleep(on);
   // Black overlay stays as fallback if Home Assistant is unreachable
   fetch('/api/display/power', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

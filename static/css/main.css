@@ -411,3 +411,7 @@ body.gfx-high #modal-overlay.open #modal-card {
   -webkit-backdrop-filter: blur(25px) saturate(180%);
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* Display off: paint nothing, run no animations (overlay stays on top to catch the wake tap) */
+body.sleeping #mirror { visibility: hidden; }
+body.sleeping #mirror * { animation-play-state: paused !important; }
