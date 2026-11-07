@@ -249,6 +249,41 @@ async def homeassistant_entities(request: Request):
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
+@app.get("/api/homeassistant/devices")
+async def homeassistant_devices(request: Request):
+    """Devices the mirror can control (grouped by HA's own device/area registry) + their states."""
+    ha = request.app.state.widgets.get("homeassistant")
+    return (ha and ha.get_ha_state()) or {"devices": [], "states": {}, "hidden": [], "connected": False}
+
+class HACallBody(BaseModel):
+    entity_id: str
+    service: str
+    data: dict = {}
+
+@app.post("/api/homeassistant/call")
+async def homeassistant_call(body: HACallBody, request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    if not ha:
+        raise HTTPException(status_code=503, detail="Home Assistant integration not loaded")
+    try:
+        await ha.call(body.entity_id, body.service, body.data)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Home Assistant: {e}")
+    return {"ok": True}
+
+@app.get("/api/homeassistant/art/{entity_id}")
+async def homeassistant_art(entity_id: str, request: Request):
+    ha = request.app.state.widgets.get("homeassistant")
+    try:
+        got = ha and await ha.art(entity_id)
+    except Exception:
+        got = None
+    if not got:
+        raise HTTPException(status_code=404)
+    return _Response(content=got[0], media_type=got[1], headers={"Cache-Control": "max-age=3600"})
+
 @app.put("/api/hue/room/{gl_id}/power")
 async def hue_power(gl_id: str, body: PowerBody, request: Request):
     hue = request.app.state.widgets.get("hue")
@@ -767,6 +802,23 @@ async def _ctrl_calendar_list_all(request: Request):
 @_control_app.get("/api/hue/resources")
 async def _ctrl_hue_resources(request: Request):
     return await hue_resources(request)
+
+# Home Assistant setup from the phone (configuration only — device control stays on the mirror)
+@_control_app.get("/api/homeassistant/status")
+async def _ctrl_ha_status(request: Request):
+    return await homeassistant_status(request)
+
+@_control_app.post("/api/homeassistant/scan")
+async def _ctrl_ha_scan(request: Request):
+    return await homeassistant_scan(request)
+
+@_control_app.get("/api/homeassistant/entities")
+async def _ctrl_ha_entities(request: Request):
+    return await homeassistant_entities(request)
+
+@_control_app.get("/api/homeassistant/devices")
+async def _ctrl_ha_devices(request: Request):
+    return await homeassistant_devices(request)
 
 @_control_app.get("/api/hue/scenes-list")
 async def _ctrl_hue_scenes_list(request: Request):
