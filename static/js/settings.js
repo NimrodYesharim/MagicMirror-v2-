@@ -431,7 +431,8 @@ function bindGeneralSave() {
     if (newPort !== oldPort) {
       showToast(`Restarting server on port ${newPort}…`);
       setTimeout(async () => {
-        try { await fetch('/api/restart', { method: 'POST' }); } catch {}
+        // Kiosk restart: Chromium's URL holds the port, so the browser must restart too
+        try { await fetch('/api/restart-kiosk', { method: 'POST' }); } catch {}
         setTimeout(() => {
           window.location.href = `http://${window.location.hostname}:${newPort}/settings`;
         }, 1800);

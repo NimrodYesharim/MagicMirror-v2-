@@ -10,7 +10,8 @@ class NewsWidget {
     this._trackObserver = null;
 
     new ResizeObserver(() => {
-      if (!this._lastData) return;
+      // Height 0 = hidden by the layout (display:none): not a real mode change, don't re-render
+      if (!this._lastData || !this.el.clientHeight) return;
       const mode = this._getMode();
       if (mode !== this._lastMode) {
         this.render(this._lastData);

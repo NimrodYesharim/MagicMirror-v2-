@@ -45,20 +45,23 @@ async function _tryFetchJson(url) {
     display = results[1];
   }
 
-  if (layout)  applyLayout(layout);
-  if (display) applyDisplay(display);
-  _reveal();
+  // Widgets measure themselves when they render: let their CSS land first
+  await window.widgetCssReady;
 
-  // Render widgets from prefetched data first, then fill gaps via REST
+  // Park prefetched data; applyLayout renders only the widgets the layout shows (hidden ones wait)
   const restNeeded = [];
   for (const w of window.activeWidgets) {
-    if (prefetchedData[w] && widgets[w] && typeof widgets[w].render === 'function') {
-      widgets[w].render(prefetchedData[w]);
-      widgets[w]._rendered = true;
-    } else if (w !== 'datetime') {
-      restNeeded.push(w);
-    }
+    if (prefetchedData[w] && widgets[w]) widgets[w]._pendingData = prefetchedData[w];
+    else if (w !== 'datetime') restNeeded.push(w);
   }
+  if (display) applyDisplay(display);
+  if (layout)  applyLayout(layout);
+  else         _flushPending();
+
+  // Reveal once fonts are in, so text doesn't visibly reflow from the fallback font
+  document.body.offsetHeight;  // layout now so the fonts the widgets use start loading
+  await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]);
+  _reveal();
 
   // Fetch any missing widget data via REST in parallel
   if (restNeeded.length) {
@@ -113,13 +116,26 @@ function _applyTemplate(idx) {
     if (!el) continue;
     el.style.gridRow    = pos.row;
     el.style.gridColumn = pos.column;
-    // Hide widget if positioned at 1/1 (sentinel for "hidden in this layout")
-    const hidden = (pos.row === '1 / 1');
-    el.style.visibility = hidden ? 'hidden' : 'visible';
+    // 1/1 = "hidden in this layout": display:none so it costs no layout, paint or animation
+    el.style.display = (pos.row === '1 / 1') ? 'none' : '';
   }
 
   // Scale after positions are set, so --wu matches the new cells in the same frame
   initWidgetScale();
+  _flushPending();
+}
+
+// Render data parked while a widget was hidden (or the display asleep), visible widgets only
+function _flushPending() {
+  if (_sleeping) return;
+  for (const w of window.activeWidgets) {
+    const widget = widgets[w];
+    if (!widget || !widget._pendingData || _isWidgetHidden(w)) continue;
+    const data = widget._pendingData;
+    widget._pendingData = null;
+    if (widget._rendered && typeof widget.update === 'function') widget.update(data);
+    else if (typeof widget.render === 'function') { widget.render(data); widget._rendered = true; }
+  }
 }
 
 // Phase 4d: Check if a widget is hidden in the current layout template
@@ -170,7 +186,7 @@ setTimeout(_reveal, 4000);
 WS.on('config', ({ layout, display }) => {
   applyLayout(layout);
   applyDisplay(display);
-  _reveal(); // no-op if already revealed by REST bootstrap
+  if (!window.__CONFIG__) _reveal(); // with injected config the bootstrap reveals, after fonts
 });
 
 // Dynamic websocket dispatcher — driven by manifest wsType
@@ -202,6 +218,49 @@ window.activeWidgets.forEach(w => {
 
 WS.on('hard_reload', () => {
   location.reload();
+});
+
+// ── Restart (from the radial menu or the phone) ───────────────────────────────
+// Server broadcasts 'restarting' then exits; start.sh respawns it. Black overlay until then.
+// Polls instead of waiting for ws.js to reconnect: its doubling backoff would add seconds.
+let _restarting = false;
+function showRestartOverlay() {
+  if (_restarting) return;
+  _restarting = true;
+  closeMenu();
+  document.getElementById('restart-overlay').classList.remove('hidden');
+  const text = document.getElementById('restart-text');
+  const t0 = Date.now();
+  let wasDown = false;  // the old server answers for ~0.5 s after the broadcast — wait for it to go away
+  const poll = async () => {
+    try {
+      const r = await fetch('/api/status', { cache: 'no-store' });
+      if (r.ok && wasDown) return location.reload();
+    } catch { wasDown = true; }
+    if (Date.now() - t0 > 60000) text.textContent = 'Still restarting — check the control app';
+    setTimeout(poll, 1000);
+  };
+  setTimeout(poll, 1000);
+}
+WS.on('restarting', showRestartOverlay);
+
+const btnRestart   = document.getElementById('btn-restart');
+const restartLabel = document.getElementById('restart-label');
+let _restartArmed = null;  // first tap arms for 3 s so a stray touch on the IR frame can't restart
+btnRestart.addEventListener('click', () => {
+  if (!_restartArmed) {
+    restartLabel.hidden = false;
+    btnRestart.classList.add('active');
+    _restartArmed = setTimeout(() => {
+      _restartArmed = null;
+      restartLabel.hidden = true;
+      btnRestart.classList.remove('active');
+    }, 3000);
+    return;
+  }
+  clearTimeout(_restartArmed);
+  showRestartOverlay();  // show now; don't depend on the broadcast making it back
+  fetch('/api/restart', { method: 'POST' }).catch(() => {});
 });
 
 // ── Radial menu toggle ────────────────────────────────────────────────────────
@@ -248,16 +307,8 @@ function applySleep(on) {
   document.body.classList.toggle('sleeping', on);
   sleepOverlay.classList.toggle('hidden', !on);
   btnSleep.classList.toggle('active', on);
-  if (on) return;
   // Waking: draw the latest data now, while the display spends ~3 s powering up
-  for (const w of window.activeWidgets) {
-    const widget = widgets[w];
-    if (!widget || !widget._pendingData || _isWidgetHidden(w)) continue;
-    const data = widget._pendingData;
-    widget._pendingData = null;
-    if (widget._rendered && typeof widget.update === 'function') widget.update(data);
-    else if (typeof widget.render === 'function') { widget.render(data); widget._rendered = true; }
-  }
+  if (!on) _flushPending();
 }
 
 // Display switched from Home Assistant (automation, app): follow it; a tap on the overlay wakes it
@@ -321,26 +372,10 @@ document.getElementById('btn-layout').addEventListener('click', () => {
     // Child transitions would animate the resize (the "shrink to top-left") — off while hidden
     document.body.classList.add('layout-switching');
     _currentIdx = (_currentIdx + 1) % _templateKeys.length;
-    _applyTemplate(_currentIdx);
-
-    // Phase 4d: Render any widgets that were hidden and now visible
-    for (const w of window.activeWidgets) {
-      const widget = widgets[w];
-      if (!widget || _isWidgetHidden(w)) continue;
-
-      if (widget._pendingData) {
-        if (typeof widget.render === 'function') {
-          widget.render(widget._pendingData);
-          widget._rendered = true;
-        }
-        widget._pendingData = null;
-      } else if (!widget._rendered && typeof widget._showSkeleton === 'function') {
-        widget._showSkeleton();
-      }
-    }
+    _applyTemplate(_currentIdx);  // also renders widgets that just became visible
 
     // Widgets that fit content to their size do it now instead of after their debounced observers
-    for (const w of window.activeWidgets) widgets[w]?.relayout?.();
+    for (const w of window.activeWidgets) if (!_isWidgetHidden(w)) widgets[w]?.relayout?.();
 
     // Two frames: the new layout is painted (hidden) before the fade-in starts
     requestAnimationFrame(() => requestAnimationFrame(() => {

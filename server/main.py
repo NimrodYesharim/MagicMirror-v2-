@@ -139,6 +139,8 @@ async def mirror_page():
         html = html.replace('</head>', f'{cfg_inject}\n</head>')
     except Exception:
         pass
+    # Widget manifests too: saves the /api/widgets round trip before any widget file can load
+    html = html.replace('</head>', f'<script>window.__WIDGETS__={_json.dumps(await list_widgets())}</script>\n</head>')
     return HTMLResponse(html)
 
 
@@ -466,18 +468,24 @@ async def ssl_debug():
 
 @app.post("/api/restart")
 async def restart_server():
-    import sys, os, subprocess
+    """Soft restart: Chromium stays up showing the restart overlay; start.sh's loop respawns uvicorn on exit 3."""
+    import os, asyncio
+    await ws_manager.broadcast({"type": "restarting"})
+    async def _do():
+        await asyncio.sleep(0.5)  # let the WS message and HTTP reply go out
+        os._exit(3)
+    asyncio.create_task(_do())
+    return {"ok": True}
+
+@app.post("/api/restart-kiosk")
+async def restart_kiosk():
+    """Full restart (server + Chromium) via scripts/restart.sh, detached so it outlives this process."""
+    import subprocess
     base = Path(__file__).resolve().parent.parent
-    display = yaml.safe_load((base / "config/display.yaml").read_text(encoding="utf-8")) or {}
-    port = display.get("port", 8000)
-    cert = base / "config/ssl/cert.pem"
-    key  = base / "config/ssl/key.pem"
-    cmd = [sys.executable, "-m", "uvicorn", "server.main:app",
-           "--host", "0.0.0.0", "--port", str(port)]
-    if cert.exists() and key.exists():
-        cmd += ["--ssl-certfile", str(cert), "--ssl-keyfile", str(key)]
-    subprocess.Popen(cmd, cwd=str(base))
-    os._exit(0)
+    await ws_manager.broadcast({"type": "restarting"})
+    subprocess.Popen(["bash", "scripts/restart.sh"], cwd=str(base), start_new_session=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"ok": True}
 
 @app.post("/api/redalert/test")
 async def redalert_test(request: Request):
@@ -735,6 +743,14 @@ async def _ctrl_redalert_areas():
 @_control_app.post("/api/reboot")
 async def _ctrl_reboot():
     return await reboot_server()
+
+@_control_app.post("/api/restart")
+async def _ctrl_restart():
+    return await restart_server()
+
+@_control_app.post("/api/restart-kiosk")
+async def _ctrl_restart_kiosk():
+    return await restart_kiosk()
 
 @_control_app.post("/api/shutdown")
 async def _ctrl_shutdown():

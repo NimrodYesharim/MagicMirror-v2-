@@ -113,18 +113,16 @@ body.layout-switching #mirror * {
   border-radius: calc(8 * var(--wu));
 }
 
+/* Pulse opacity, not background-position: opacity runs on the GPU compositor, while the old
+   moving gradient repainted every skeleton every frame, right when the Pi is busiest (boot). */
 .skeleton-block {
-  background: linear-gradient(90deg,
-    rgba(255,255,255,0.04) 25%,
-    rgba(255,255,255,0.09) 50%,
-    rgba(255,255,255,0.04) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+  background: rgba(255,255,255,0.07);
+  animation: shimmer 1.6s ease-in-out infinite alternate;
   border-radius: 8px;
 }
 @keyframes shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  from { opacity: 0.55; }
+  to   { opacity: 1; }
 }
 
 /* ── Hamburger toggle button ── */
@@ -149,7 +147,8 @@ body.layout-switching #mirror * {
   justify-content: center;
   gap: 5px;
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Not `all`: the big box-shadows would repaint every frame of the 0.4 s spin */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease, color 0.18s, background 0.18s;
 }
 
 #menu-toggle .bar {
@@ -224,7 +223,7 @@ body.layout-switching #mirror * {
   justify-content: center;
   color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s, color 0.3s;
 }
 
 .radial-btn:active {
@@ -271,12 +270,12 @@ body.layout-switching #mirror * {
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 #radial-menu.open .radial-label {
   opacity: 1;
-  transition: all 0.3s ease calc(var(--delay) * 60ms + 300ms);
+  transition: opacity 0.3s ease calc(var(--delay) * 60ms + 300ms);
 }
 
 /* ── Overlays ── */
@@ -285,6 +284,20 @@ body.layout-switching #mirror * {
 
 #sleep-overlay  { background: #000; pointer-events: all; z-index: 400; }
 #ring-overlay   { pointer-events: none; box-sizing: border-box; }
+
+/* Restart: above everything (menu 9000, modal 10000) until the page reloads */
+#restart-overlay {
+  background: #000; pointer-events: all; z-index: 20000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  font-family: 'SFPro', -apple-system, sans-serif; font-size: 28px; color: rgba(255,255,255,0.45);
+}
+#restart-overlay.hidden { display: none; }
+.restart-spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.12); border-top-color: rgba(255,255,255,0.5);
+  animation: restart-spin 1s linear infinite;
+}
+@keyframes restart-spin { to { transform: rotate(360deg); } }
 
 /* Alert overlay styles live in css/widgets/redalert.css */
 

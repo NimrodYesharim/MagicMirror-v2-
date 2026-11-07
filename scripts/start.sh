@@ -48,11 +48,19 @@ if command -v certutil &>/dev/null; then
 fi
 
 # ── Start FastAPI over HTTPS (always) ────────────────────────────────────────
-uvicorn server.main:app \
-  --host 0.0.0.0 \
-  --port "$PORT" \
-  --ssl-keyfile config/ssl/key.pem \
-  --ssl-certfile config/ssl/cert.pem &
+# Looped: exit 0 (End Mirror Process) stops it; exit 3 (/api/restart) or a crash respawns it
+# while Chromium keeps showing the page.
+( while true; do
+    uvicorn server.main:app \
+      --host 0.0.0.0 \
+      --port "$PORT" \
+      --ssl-keyfile config/ssl/key.pem \
+      --ssl-certfile config/ssl/cert.pem
+    code=$?
+    [ "$code" -eq 0 ] && break
+    echo "Server exited ($code) — restarting"
+    sleep 1
+  done ) &
 SERVER_PID=$!
 
 echo "Waiting for server on port $PORT..."
@@ -146,4 +154,5 @@ chromium-browser \
   ${MIRROR_DEBUG:+--remote-debugging-port=9222} \
   "$URL"
 
-kill $SERVER_PID
+kill $SERVER_PID                      # the loop first, so it can't respawn
+pkill -f 'uvicorn server.main'

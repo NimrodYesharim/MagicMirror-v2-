@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="/css/main.css">
   <!-- Dynamic widget CSS will be injected here -->
   <style id="dynamic-styles"></style>
+  <!-- Download app.js alongside the widget scripts; it still runs after them -->
+  <link rel="preload" href="/js/app.js" as="script">
 </head>
 <body>
   <div id="mirror">
@@ -18,11 +20,15 @@
   <div id="sleep-overlay"  class="overlay hidden"></div>
   <div id="ring-overlay"   class="overlay hidden"></div>
   <div id="alert-overlay"  class="overlay hidden"></div>
+  <div id="restart-overlay" class="overlay hidden">
+    <div class="restart-spinner"></div>
+    <div id="restart-text">Restarting…</div>
+  </div>
   <div id="modal-overlay"  class="overlay">
     <div id="modal-card"></div>
   </div>
 
-  <!-- Radial menu — 5 buttons arc from straight-up to straight-left, radius 160px -->
+  <!-- Radial menu — 6 buttons, 18° apart, arc from straight-up to straight-left, radius 160px -->
   <div id="radial-menu">
     <!-- Sleep: 90° (straight up) -->
     <div class="radial-item" style="--tx:0px;--ty:-160px;--delay:0">
@@ -32,8 +38,8 @@
         </svg>
       </button>
     </div>
-    <!-- Ring Light: 112.5° -->
-    <div class="radial-item" style="--tx:-61px;--ty:-148px;--delay:1">
+    <!-- Ring Light: 108° -->
+    <div class="radial-item" style="--tx:-49px;--ty:-152px;--delay:1">
       <button class="radial-btn" id="btn-ring">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="4"/>
@@ -41,16 +47,16 @@
         </svg>
       </button>
     </div>
-    <!-- Refresh: 135° (diagonal) -->
-    <div class="radial-item" style="--tx:-113px;--ty:-113px;--delay:2">
+    <!-- Refresh: 126° -->
+    <div class="radial-item" style="--tx:-94px;--ty:-129px;--delay:2">
       <button class="radial-btn" id="btn-refresh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-4.5L1 10"/>
         </svg>
       </button>
     </div>
-    <!-- Settings: 157.5° -->
-    <div class="radial-item" style="--tx:-148px;--ty:-61px;--delay:3">
+    <!-- Settings: 144° -->
+    <div class="radial-item" style="--tx:-129px;--ty:-94px;--delay:3">
       <a class="radial-btn" href="/settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -58,8 +64,17 @@
         </svg>
       </a>
     </div>
+    <!-- Restart: 162° — tap twice; the label only shows while armed -->
+    <div class="radial-item" style="--tx:-152px;--ty:-49px;--delay:4">
+      <button class="radial-btn" id="btn-restart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+        </svg>
+      </button>
+      <span class="radial-label" id="restart-label" hidden>Tap again to restart</span>
+    </div>
     <!-- Layout: 180° (straight left) — keeps label showing current template name -->
-    <div class="radial-item" style="--tx:-160px;--ty:0px;--delay:4">
+    <div class="radial-item" style="--tx:-160px;--ty:0px;--delay:5">
       <button class="radial-btn" id="btn-layout">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -90,8 +105,7 @@
     window.activeWidgets = [];
 
     // Dynamically load widgets from manifest objects
-    fetch('/api/widgets')
-      .then(r => r.json())
+    (window.__WIDGETS__ ? Promise.resolve(window.__WIDGETS__) : fetch('/api/widgets').then(r => r.json()))
       .then(async manifests => {
         manifests = manifests.filter(m => !m.settingsOnly);  // integrations have no mirror UI
         window.widgetManifests = {};
@@ -105,7 +119,8 @@
             return;
         }
 
-        // Create containers + load CSS for all widgets (non-blocking)
+        // Create containers + load CSS for all widgets; app.js waits for the CSS so nothing shows unstyled
+        const cssLoaded = [];
         manifests.forEach(m => {
           const w = m.name;
           const base = m.basePath || w;
@@ -119,8 +134,10 @@
           let link = document.createElement('link');
           link.rel = 'stylesheet';
           link.href = `/widgets/${base}/${w}.css`;
+          cssLoaded.push(new Promise(r => { link.onload = link.onerror = r; }));
           document.head.appendChild(link);
         });
+        window.widgetCssReady = Promise.all(cssLoaded);
 
         // Load ALL widget scripts in parallel
         await Promise.all(manifests.map(m => new Promise(resolve => {

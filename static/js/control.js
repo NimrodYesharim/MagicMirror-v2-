@@ -248,6 +248,26 @@ document.getElementById('btn-hard-reload').addEventListener('click', async () =>
   await doAction('/api/hard-reload', 'POST', 'Hard reload mirror');
 });
 
+// Both restarts take this process down too; WS 'open' below announces when it's back
+let _awaitingRestart = false;
+document.getElementById('btn-restart').addEventListener('click', async () => {
+  const ok = await confirm('Restart Mirror?', 'Restarts the server. The mirror shows a black "Restarting…" screen and comes back in a few seconds.', 'Restart');
+  if (ok) {
+    _awaitingRestart = true;
+    showToast('Restarting…');
+    doAction('/api/restart', 'POST', 'Restarting mirror…');
+  }
+});
+
+document.getElementById('btn-restart-kiosk').addEventListener('click', async () => {
+  const ok = await confirm('Restart Kiosk?', 'Restarts the server and the browser. Use this if the mirror screen is frozen.', 'Restart');
+  if (ok) {
+    _awaitingRestart = true;
+    showToast('Restarting kiosk…');
+    doAction('/api/restart-kiosk', 'POST', 'Restarting kiosk…');
+  }
+});
+
 document.getElementById('btn-reboot').addEventListener('click', async () => {
   const ok = await confirm('End Mirror Process?', 'The kiosk window and server process will be closed. The mirror display will go offline.', 'End Process');
   if (ok) {
@@ -1129,6 +1149,7 @@ WS.on('open', () => {
   updateStatus();
   pollStatus();
   logLine({ time: now(), level: 'INFO', msg: 'Connected to server' });
+  if (_awaitingRestart) { _awaitingRestart = false; showToast('Mirror is back'); }
 });
 
 WS.on('close', () => {

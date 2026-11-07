@@ -4,10 +4,12 @@
 #        MIRROR_DEBUG=1 bash scripts/restart.sh   # + Chromium DevTools on 127.0.0.1:9222 (profiling)
 cd "$(dirname "$0")/.." || exit 1
 
-# Stop by PID so this script's own command line can never match a kill pattern
-for pat in 'uvicorn server.main' 'chromium-browser' 'bash scripts/start.sh'; do
+# Stop by PID so this script's own command line can never match a kill pattern.
+# start.sh first: its uvicorn loop would otherwise respawn the server we're about to kill.
+# No $PPID guard — when /api/restart-kiosk runs this, the parent is the uvicorn to stop.
+for pat in 'scripts/start.sh' 'uvicorn server.main' 'chromium-browser'; do
   for pid in $(pgrep -f "$pat"); do
-    [ "$pid" != "$$" ] && [ "$pid" != "$PPID" ] && kill "$pid" 2>/dev/null
+    [ "$pid" != "$$" ] && kill "$pid" 2>/dev/null
   done
 done
 sleep 2
