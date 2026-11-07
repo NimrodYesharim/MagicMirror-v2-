@@ -779,7 +779,6 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
 .ha-chips .sub-nav-btn { min-height: var(--touch); padding: 0 22px; font-size: 16px; }
 #ha-network { display: flex; flex-direction: column; gap: 14px; }
 #ha-network[hidden] { display: none; }
-.ha-hint { color: var(--muted); font-size: 14px; }
 .ha-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
 .ha-row {
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
@@ -789,12 +788,3 @@ input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent);
 }
 .ha-row.active { border-color: var(--accent); background: rgba(58,126,255,0.12); }
 .ha-row-sub { color: var(--muted); font-size: 13px; }
-.ha-ip { display: flex; align-items: center; gap: 4px; font-size: 22px; color: var(--muted); }
-.ha-seg {
-  min-width: 64px; min-height: var(--touch); padding: 0 10px;
-  background: var(--surface); border: 1.5px solid var(--border2); border-radius: 10px;
-  color: var(--text); font-size: 22px; font-variant-numeric: tabular-nums; cursor: pointer;
-}
-.ha-seg.active { border-color: var(--accent); }
-.ha-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 360px; }
-.ha-keypad .secondary-btn { font-size: 22px; padding: 0; }
