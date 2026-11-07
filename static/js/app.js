@@ -446,7 +446,7 @@ const WIDGET_REFS = {
   hue:      { cols: 7, rows: 8 },
   hue_scenes: { cols: 1.5, rows: 8 },
   ha_home:  { cols: 2, rows: 2 },
-  ha_tile:  { cols: 2, rows: 8 },   // per placed device (`ha_tile:<entity>`): one Hue room card
+  ha_tile:  { cols: 2, rows: 3 },   // per placed device (`ha_tile:<entity>`): smallest box the Hue-card content fits
 };
 
 let _scaleRafId = null;
@@ -477,6 +477,13 @@ function applyAllScales() {
 
   _setWu(document.documentElement, globalWu);
 
+  // Hue's card scale: device tiles take their corners from it and never grow past it
+  const hue = sizes.find(([w]) => w === 'hue');
+  const hueWu = hue && hue[3] > 0 && !_isWidgetHidden('hue')
+    ? hue[3] / (WIDGET_REFS.hue.rows * rowHeight) * globalWu : globalWu;
+  const hv = `${hueWu}px`, root = document.documentElement.style;
+  if (root.getPropertyValue('--hue-wu') !== hv) root.setProperty('--hue-wu', hv);
+
   sizes.forEach(([w, widgetEl, W_cur, H_cur]) => {
     const ref = WIDGET_REFS[w] || WIDGET_REFS[w.split(':')[0]];
     if (ref) {
@@ -485,14 +492,14 @@ function applyAllScales() {
 
       let ratio = 1.0;
       if (W_ref > 0 && H_ref > 0 && W_cur > 0 && H_cur > 0) {
-        // Height-driven like Hue, so a tile as tall as the Hue widget gets exactly its sizes
-        if (w === 'hue' || w === 'hue_scenes' || w.startsWith('ha_tile:')) {
+        if (w === 'hue' || w === 'hue_scenes') {
           ratio = H_cur / H_ref;
         } else {
           ratio = Math.min(W_cur / W_ref, H_cur / H_ref);
         }
       }
-      const localWu = ratio * globalWu;
+      let localWu = ratio * globalWu;
+      if (w.startsWith('ha_tile:')) localWu = Math.min(localWu, hueWu);  // fits any shape, never bigger than Hue
       _setWu(widgetEl, localWu);
     } else {
       _setWu(widgetEl, globalWu);

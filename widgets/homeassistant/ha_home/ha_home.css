@@ -110,13 +110,15 @@
 .widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
 
 /* ── Placed tile = a Hue room card (sizes, colours and toggle copied from widgets/hue/hue.css) ──
-   Column: icon · name · big value · sub · play button or iOS toggle. Colour lives only in the border, like Hue. */
+   Column: icon · name · big value · sub · play button or iOS toggle. Colour lives only in the border, like Hue.
+   Content scales with the tile (any shape, square too); corners and border use Hue's own scale (--hue-wu, app.js)
+   so the roundness is exactly the Hue cards'. */
 .ha-tile.ha-placed {
   align-items: center; text-align: center;
   gap: calc(10 * var(--u));
   padding: calc(22 * var(--u)) calc(20 * var(--u)) calc(18 * var(--u));
-  border-radius: calc(55 * var(--u));
-  border: calc(3 * var(--u)) solid #1e1e1e;
+  border-radius: calc(55 * var(--hue-wu, var(--u)));
+  border: calc(3 * var(--hue-wu, var(--u))) solid #1e1e1e;
 }
 .ha-tile.ha-placed.on { border-color: rgb(var(--rgb)); }
 .ha-placed .ha-tile-top { display: contents; }  /* icon and button become column items */

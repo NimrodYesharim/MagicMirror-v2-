@@ -549,7 +549,7 @@ async function addDeviceTile() {
       const key = HA_TILE + r.dataset.add;
       const tpl = _editLayout.templates[_editTpl];
       tpl.widgets = tpl.widgets || {};
-      if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1/9', column: '1/3' };  // Hue-card shape
+      if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1/4', column: '1/4' };  // square
       popDetail();
       selectWidget(key);
     });
