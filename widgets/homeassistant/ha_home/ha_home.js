@@ -280,6 +280,42 @@
     });
   }
 
+  // ── Option pictures: fan speed → level bars, swing → airflow from the vent. null = no picture (keep the word) ──
+  const FAN_LEVEL = { quiet: 1, low: 1, medium_low: 2, medium: 2, medium_high: 3, high: 3, strong: 4, turbo: 4 };
+  function fanPic(v) {
+    if (/auto/i.test(v)) return P.auto;
+    const n = FAN_LEVEL[String(v).toLowerCase()];
+    return n ? [0, 1, 2, 3].map(i => `<path d="M${5 + i * 4.7} 20v-${4 + i * 4}"${i < n ? '' : ' opacity=".25"'}/>`).join('') : null;
+  }
+  // Angle of the airflow, 0 = straight out of the vent (vertical swing: −up/+down; horizontal: −right/+left)
+  const AIM = { top: -50, middletop: -25, middle: 0, middlebottom: 25, bottom: 50,
+                left: 50, centerleft: 25, center: 0, centerright: -25, right: -50 };
+  const SWEEP = { full: [-50, 50], top: [-50, -10], middle: [-25, 25], center: [-25, 25], bottom: [10, 50] };
+  const pt = (deg, r) => { const a = deg * Math.PI / 180; return `${(6 + r * Math.cos(a)).toFixed(1)} ${(12 + r * Math.sin(a)).toFixed(1)}`; };
+  const ray = deg => `M6 12L${pt(deg, 14)}`;
+  function swingPic(v, horizontal) {
+    const [, kind = '', where] = /^(fixed|range)?(.*)$/i.exec(v).map(s => s?.toLowerCase());
+    let d;
+    if (where === 'stopped' || where === 'off') d = 'M11 9l5 6M16 9l-5 6';
+    else if (kind === 'fixed' && where === 'leftright') d = ray(50) + ray(-50);
+    else if (kind === 'fixed' && where in AIM) d = ray(AIM[where]);
+    else if (kind === 'range' && SWEEP[where]) {
+      const [a, b] = SWEEP[where];
+      d = ray(a) + ray(b) + `M${pt(a, 10)}A10 10 0 0 1 ${pt(b, 10)}`;
+    } else return null;
+    const g = `<path d="M4 7v10"/><path d="${d}"/>`;  // the vent, then the air
+    return horizontal ? `<g transform="rotate(90 12 12)">${g}</g>` : g;
+  }
+  // Icon-only chip when the value has a picture; the word stays as its accessible name and tooltip
+  function picChips(list, current, attr, picFn, extra = '') {
+    return `<div class="ha-chips">${list.map(v => {
+      const pic = picFn(v), word = esc(pretty(v));
+      return `<button class="ha-chip${pic ? ' pic' : ''}${v === current ? ' active' : ''}" ${extra}data-${attr}="${esc(v)}" aria-label="${word}" title="${word}">${pic
+        ? `<svg class="ha-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${pic}</svg>`
+        : `<span>${word}</span>`}</button>`;
+    }).join('')}</div>`;
+  }
+
   function chips(list, current, attr, labelFn = pretty, iconFn = null) {
     return `<div class="ha-chips">${list.map(v => `
       <button class="ha-chip${v === current ? ' active' : ''}" data-${attr}="${esc(v)}">${iconFn ? icon(iconFn(v) || 'power') : ''}<span>${esc(labelFn(v))}</span></button>`).join('')}</div>`;
@@ -301,9 +337,9 @@
           <div class="ha-temp"><b>${a.temperature ?? '–'}°</b><span>${a.current_temperature != null ? `${a.current_temperature}° in the room` : ''}</span></div>
           <button class="ha-round" data-act="temp+" aria-label="Raise">${icon('plus')}</button>
         </div>
-        <div class="ha-label">Mode</div>${chips([...(a.hvac_modes || [])].sort((x, y) => (y === 'off') - (x === 'off')), st.s, 'hvac', pretty, v => v === 'off' ? 'power' : MODE_ICON[v])}
-        ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${chips(a.fan_modes, a.fan_mode, 'fan')}` : ''}
-        ${a.swing_modes?.length ? `<div class="ha-label">Swing</div>${chips(a.swing_modes, a.swing_mode, 'swing')}` : ''}
+        <div class="ha-label">Mode</div>${picChips([...(a.hvac_modes || [])].sort((x, y) => (y === 'off') - (x === 'off')), st.s, 'hvac', v => P[v === 'off' ? 'power' : MODE_ICON[v]] || null)}
+        ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${picChips(a.fan_modes, a.fan_mode, 'fan', fanPic)}` : ''}
+        ${a.swing_modes?.length ? `<div class="ha-label">Swing</div>${picChips(a.swing_modes, a.swing_mode, 'swing', v => swingPic(v, false))}` : ''}
         ${extrasHTML(dev)}`;
     } else if (d === 'media_player') {
       const f = a.supported_features || 0, on = !['off', 'unavailable', 'standby'].includes(st.s);
@@ -340,7 +376,9 @@
         return `<label class="ha-row"><span>${esc(label)}</span>
           <input type="checkbox" class="ha-switch" data-extra="${esc(x)}"${st.s === 'on' ? ' checked' : ''}${st.s === 'unavailable' ? ' disabled' : ''}></label>`;
       }
-      if (d === 'select') return `<div class="ha-label">${esc(label)}</div>${chips(a.options || [], st.s, 'option', pretty).replace(/data-option=/g, `data-select="${esc(x)}" data-option=`)}`;
+      if (d === 'select') return `<div class="ha-label">${esc(label)}</div>${/swing/i.test(x)
+        ? picChips(a.options || [], st.s, 'option', v => swingPic(v, /horizontal/i.test(x)), `data-select="${esc(x)}" `)
+        : chips(a.options || [], st.s, 'option', pretty).replace(/data-option=/g, `data-select="${esc(x)}" data-option=`)}`;
       if (d === 'binary_sensor') return st.s === 'on' ? `<div class="ha-row warn">${icon('warn')}<span>${esc(label)}</span></div>` : '';
       if (d === 'button') return `<button class="ha-wide hold" data-press="${esc(x)}"><span class="ha-hold-fill"></span><span>Hold to ${esc(label.toLowerCase())}</span></button>`;
       return '';

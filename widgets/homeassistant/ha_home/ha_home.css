@@ -106,6 +106,7 @@
 #widget-ha_home { padding: calc(6 * var(--wu)) !important; }
 /* Same vertical extent as a Hue card in the same rows (Hue gets .widget's !important 20 top/bottom); 6.5 per side = Hue's 13 gap */
 .widget[id^="widget-ha_tile:"] { padding: calc(20 * var(--wu)) calc(6.5 * var(--wu)) !important; }
+.widget[id^="widget-ha_tile:"].compact { padding: calc(6 * var(--wu)) !important; }  /* = #widget-ha_home */
 .widget[id^="widget-ha_tile:"] { display: flex; }
 .widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
 
@@ -201,6 +202,8 @@
   font: 500 19px 'SFPro', 'Rubik', sans-serif; cursor: pointer;
 }
 .ha-chip .ha-ic { font-size: 24px; }
+.ha-chip.pic { width: 60px; padding: 0; justify-content: center; }  /* picture-only option (word in title/aria-label) */
+.ha-chip.pic .ha-ic { font-size: 30px; }
 .ha-chip.active { border-color: rgb(var(--rgb)); background: rgba(var(--rgb), 0.22); color: #fff; }
 .ha-detail-body:not([data-mode]) { --rgb: 10, 132, 255; }
 
@@ -252,3 +255,19 @@
 .ha-range { flex: 1; height: 60px; accent-color: #fff; }
 
 .ha-card.pending .ha-head-title span::after { content: ' · updating…'; }
+
+/* ── Compact placed tile (too short for the Hue column, e.g. square 2 × 2; class set in app.js) = the Home button:
+   40 corners, 3 border, centred 44 icon, 17 name, 13 status lines. Tap opens the controls (power is in there). */
+.compact .ha-tile.ha-placed {
+  justify-content: center; gap: calc(6 * var(--u));  /* Home button: gap 6 */
+  padding: calc(10 * var(--u));
+  border-radius: calc(40 * var(--u));
+  border-width: calc(3 * var(--u));
+}
+.compact .ha-tile.ha-placed .ha-tile-icon { font-size: calc(44 * var(--u)); padding: 0 0 calc(2 * var(--u)); color: #8e8e93; }
+.compact .ha-tile.ha-placed.on .ha-tile-icon { color: rgb(var(--rgb)); }
+.compact .ha-tile.ha-placed .ha-tile-name { margin-top: 0; font-size: calc(17 * var(--u)); font-weight: 500; color: #e8e8e8; }
+.compact .ha-tile.ha-placed .ha-tile-main { flex: none; font-size: calc(13 * var(--u)); font-weight: 500; color: #8e8e93; }
+.compact .ha-tile.ha-placed.on .ha-tile-main { color: rgb(var(--rgb)); }
+.compact .ha-tile.ha-placed .ha-tile-sub { margin-top: 0; font-size: calc(13 * var(--u)); color: #636366; }
+.compact .ha-tile.ha-placed .ha-tile-btn, .compact .ha-tile.ha-placed .card-toggle-wrap { display: none; }

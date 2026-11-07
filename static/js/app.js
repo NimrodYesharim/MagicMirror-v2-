@@ -446,7 +446,7 @@ const WIDGET_REFS = {
   hue:      { cols: 7, rows: 8 },
   hue_scenes: { cols: 1.5, rows: 8 },
   ha_home:  { cols: 2, rows: 2 },
-  ha_tile:  { cols: 2, rows: 3 },   // per placed device (`ha_tile:<entity>`): smallest box the Hue-card content fits
+  ha_tile:  { cols: 1.5, rows: 3.25 }, // per placed device (`ha_tile:<entity>`): the full Hue-card content (260 high)
 };
 
 let _scaleRafId = null;
@@ -494,12 +494,18 @@ function applyAllScales() {
       if (W_ref > 0 && H_ref > 0 && W_cur > 0 && H_cur > 0) {
         if (w === 'hue' || w === 'hue_scenes') {
           ratio = H_cur / H_ref;
+        } else if (w.startsWith('ha_tile:')) {
+          // Too short for the Hue-card column → compact: the Home button's look, scaled exactly like it
+          const compact = H_cur < H_ref, home = WIDGET_REFS.ha_home;
+          widgetEl.classList.toggle('compact', compact);
+          ratio = compact ? Math.min(W_cur / (home.cols * colWidth), H_cur / (home.rows * rowHeight))
+                          : Math.min(W_cur / W_ref, H_cur / H_ref);
         } else {
           ratio = Math.min(W_cur / W_ref, H_cur / H_ref);
         }
       }
       let localWu = ratio * globalWu;
-      if (w.startsWith('ha_tile:')) localWu = Math.min(localWu, hueWu);  // fits any shape, never bigger than Hue
+      if (w.startsWith('ha_tile:') && !widgetEl.classList.contains('compact')) localWu = Math.min(localWu, hueWu);  // never bigger than Hue
       _setWu(widgetEl, localWu);
     } else {
       _setWu(widgetEl, globalWu);
