@@ -507,6 +507,14 @@ function layoutSection(inner) {
               </label>`).join('')}
           </div>
         </div>
+        <div class="field-group">
+          <h3>Device tiles</h3>
+          <div class="group-inner">
+            <div id="tile-list"></div>
+            <button id="btn-add-tile" class="secondary-btn" style="width:100%">+ Device tile</button>
+            <div id="tile-picker" class="ha-list" hidden></div>
+          </div>
+        </div>
         <div class="save-row" style="padding-top:16px;border-top:1px solid #242424;margin-top:auto">
           <button id="btn-save-layout" class="save-btn" style="width:100%">Save Layout</button>
         </div>
@@ -560,6 +568,9 @@ function layoutSection(inner) {
     await doSave('layout', { ...CFG.layout, current: activeTemplate, templates: editorTemplates });
   };
 
+  document.getElementById('btn-add-tile').onclick = _toggleTilePicker;
+  _loadHADevices().then(() => _rebuildGrid());  // device names for tile labels
+
   requestAnimationFrame(() => {
     const toolbar = document.querySelector('.layout-toolbar');
     const wrap    = document.querySelector('.layout-editor-wrap');
@@ -595,7 +606,9 @@ function _rebuildGrid() {
   // Widget boxes
   for (const [key, pos] of Object.entries(tpl.widgets || {})) {
     if (_isHidden(pos)) continue;
-    const m = WIDGET_META[key] || { label: key.startsWith('ha_tile:') ? key.slice(8) : key, color: '#333' };
+    const m = WIDGET_META[key] || (key.startsWith(HA_TILE)
+      ? { label: esc(_haName(key.slice(HA_TILE.length))), color: TILE_COLOR }
+      : { label: key, color: '#333' });
     const { s: cs, e: ce } = _parseSpan(pos.column);
     const { s: rs, e: re } = _parseSpan(pos.row);
     html += `<div class="gw-box" data-key="${key}"
@@ -637,6 +650,59 @@ function _rebuildGrid() {
   });
 
   _bindDragResize(grid, CELL_W, CELL_H);
+  _renderTileList();
+}
+
+// ── Device tiles: one Home Assistant device per tile, layout key `ha_tile:<entity>` (same as the phone panel) ──
+const HA_TILE = 'ha_tile:', TILE_COLOR = '#5E5CE6';
+let _haDevices = null;
+async function _loadHADevices() {
+  try { const r = await fetch('/api/homeassistant/devices'); if (r.ok) _haDevices = await r.json(); } catch {}
+}
+const _haName = entity => _haDevices?.devices?.find(d => d.entity === entity)?.name || entity;
+
+function _renderTileList() {
+  const list = document.getElementById('tile-list');
+  const tpl = editorTemplates[activeTemplate];
+  if (!list || !tpl) return;
+  const keys = Object.keys(tpl.widgets || {}).filter(k => k.startsWith(HA_TILE));
+  list.innerHTML = keys.map(k => `
+    <div class="widget-toggle active">
+      <span class="wt-swatch" style="background:${TILE_COLOR}"></span>
+      <span style="flex:1">${esc(_haName(k.slice(HA_TILE.length)))}</span>
+      <button class="icon-btn" data-rm="${esc(k)}" aria-label="Remove tile">✕</button>
+    </div>`).join('') || '<div class="hint">No device tiles in this layout</div>';
+  list.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+    delete tpl.widgets[b.dataset.rm];
+    _rebuildGrid();
+  });
+}
+
+async function _toggleTilePicker() {
+  const picker = document.getElementById('tile-picker');
+  if (!picker.hidden) { picker.hidden = true; return; }
+  picker.hidden = false;
+  picker.innerHTML = '<div class="hint">Loading devices…</div>';
+  await _loadHADevices();
+  const devices = _haDevices?.devices || [];
+  const tpl = editorTemplates[activeTemplate];
+  const used = new Set(Object.keys(tpl.widgets || {}));
+  picker.innerHTML = devices.length
+    ? [...new Set(devices.map(d => d.area))].map(area => `<div class="hint">${esc(area)}</div>` +
+        devices.filter(d => d.area === area).map(d => {
+          const on = used.has(HA_TILE + d.entity);
+          return `<button class="ha-row${on ? ' active' : ''}" data-add="${esc(d.entity)}">
+            <span>${esc(d.name)}</span><span class="ha-row-sub">${on ? 'On layout' : esc(d.entity)}</span>
+          </button>`;
+        }).join('')).join('')
+    : '<div class="hint">No devices: connect Home Assistant first (Widgets Configuration → Home Assistant)</div>';
+  picker.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    tpl.widgets = tpl.widgets || {};
+    const key = HA_TILE + b.dataset.add;
+    if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1 / 3', column: '1 / 4' };  // top left: drag it into place
+    picker.hidden = true;
+    _rebuildGrid();
+  });
 }
 
 function _bindDragResize(grid, CELL_W, CELL_H) {
