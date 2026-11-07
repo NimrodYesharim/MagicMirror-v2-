@@ -103,9 +103,46 @@
 .holding .ha-tile-hold, .holding .ha-hold-fill { transform: scaleX(1); transition: transform 0.8s linear; }
 
 /* A tile placed on the mirror fills its grid cell (small gutter, not .widget's big padding) */
-.widget[id^="widget-ha_tile:"], #widget-ha_home { padding: calc(6 * var(--wu)) !important; }
+#widget-ha_home { padding: calc(6 * var(--wu)) !important; }
+/* Same vertical extent as a Hue card in the same rows (#widget-hue: padding 0 20 20); 6.5 per side = Hue's 13 gap */
+.widget[id^="widget-ha_tile:"] { padding: 0 calc(6.5 * var(--wu)) calc(20 * var(--wu)) !important; }
 .widget[id^="widget-ha_tile:"] { display: flex; }
 .widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
+
+/* ── Placed tile = a Hue room card (sizes, colours and toggle copied from widgets/hue/hue.css) ──
+   Column: icon · name · big value · sub · play button or iOS toggle. Colour lives only in the border, like Hue. */
+.ha-tile.ha-placed {
+  align-items: center; text-align: center;
+  gap: calc(10 * var(--u));
+  padding: calc(22 * var(--u)) calc(20 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(55 * var(--u));
+  border: calc(3 * var(--u)) solid #1e1e1e;
+}
+.ha-tile.ha-placed.on { border-color: rgb(var(--rgb)); }
+.ha-placed .ha-tile-top { display: contents; }  /* icon and button become column items */
+.ha-placed .ha-tile-icon {
+  position: relative; order: 0; padding-top: calc(2 * var(--u));
+  font-size: calc(34 * var(--u)); color: #3a3a3a; transition: color 0.3s;
+}
+.ha-tile.ha-placed.on .ha-tile-icon { color: #aaa; }
+.ha-tile.ha-placed .ha-tile-name {
+  order: 1; width: 100%; margin-top: calc(-6 * var(--u));  /* Hue: 4 between icon and name */
+  font-size: calc(13 * var(--u)); font-weight: 600; color: #3a3a3a; transition: color 0.3s;
+}
+.ha-tile.ha-placed.on .ha-tile-name { color: #ddd; }
+.ha-placed .ha-tile-main {
+  order: 2; flex: 1; margin-top: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(44 * var(--u)); font-weight: 200; color: #3a3a3a;
+}
+.ha-tile.ha-placed.on .ha-tile-main { color: #ddd; }
+.ha-placed .ha-tile-sub { order: 3; width: 100%; margin-top: auto; color: #555; }
+.ha-tile.ha-placed.on .ha-tile-sub { color: #8e8e93; }
+.ha-placed [dir="rtl"] { text-align: center; }
+.ha-placed .ha-tile-btn { position: relative; order: 4; margin: 0; }
+.ha-placed.has-toggle .ha-tile-btn { display: none; }  /* the toggle does power */
+.ha-placed .card-toggle-wrap { order: 5; position: relative; }
+.ha-placed .ha-tile-warn { top: calc(22 * var(--u)); right: calc(24 * var(--u)); }
 
 /* ── Popup (inside the shared #modal-card) ── */
 #modal-card.ha-card {

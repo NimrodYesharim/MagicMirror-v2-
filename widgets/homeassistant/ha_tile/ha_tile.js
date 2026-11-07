@@ -22,7 +22,23 @@ class HaTileWidget {
     }
     this.el.innerHTML = HAUI.tileHTML(dev);
     const tile = this.el.firstElementChild;
-    const update = () => HAUI.updateTile(tile, dev);
+    tile.classList.add('ha-placed');  // styled as a Hue room card (ha_home.css)
+    // Power devices get the Hue card's iOS toggle; the mirror's own socket keeps hold-to-turn-off
+    const toggle = ['climate', 'switch'].includes(dev.entity.split('.')[0]) && dev.entity !== HAUI.displaySwitch
+      ? tile.appendChild(Object.assign(document.createElement('div'), {
+          className: 'card-toggle-wrap',
+          innerHTML: '<label class="ios-toggle"><input type="checkbox"><span class="ios-track"><span class="ios-knob"></span></span></label>',
+        }))
+      : null;
+    if (toggle) {
+      tile.classList.add('has-toggle');
+      // HA state drives the switch (optimistic via HA.call), so don't let the click flip it locally
+      toggle.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); tile.querySelector('.ha-tile-btn').click(); });
+    }
+    const update = () => {
+      HAUI.updateTile(tile, dev);
+      if (toggle) toggle.querySelector('input').checked = tile.classList.contains('on');
+    };
     update();
     HAUI.bindTile(tile, dev);
     this._unsubs = [HA.on(dev.entity, update), ...dev.extras.map(([x]) => HA.on(x, update))];

@@ -699,7 +699,7 @@ async function _toggleTilePicker() {
   picker.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
     tpl.widgets = tpl.widgets || {};
     const key = HA_TILE + b.dataset.add;
-    if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1 / 3', column: '1 / 4' };  // top left: drag it into place
+    if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1 / 9', column: '1 / 3' };  // Hue-card shape, top left: drag it into place
     picker.hidden = true;
     _rebuildGrid();
   });

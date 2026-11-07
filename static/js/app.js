@@ -446,7 +446,7 @@ const WIDGET_REFS = {
   hue:      { cols: 7, rows: 8 },
   hue_scenes: { cols: 1.5, rows: 8 },
   ha_home:  { cols: 2, rows: 2 },
-  ha_tile:  { cols: 3, rows: 2 },   // per placed device: `ha_tile:<entity>` uses this base ref
+  ha_tile:  { cols: 2, rows: 8 },   // per placed device (`ha_tile:<entity>`): one Hue room card
 };
 
 let _scaleRafId = null;
@@ -485,7 +485,8 @@ function applyAllScales() {
 
       let ratio = 1.0;
       if (W_ref > 0 && H_ref > 0 && W_cur > 0 && H_cur > 0) {
-        if (w === 'hue' || w === 'hue_scenes') {
+        // Height-driven like Hue, so a tile as tall as the Hue widget gets exactly its sizes
+        if (w === 'hue' || w === 'hue_scenes' || w.startsWith('ha_tile:')) {
           ratio = H_cur / H_ref;
         } else {
           ratio = Math.min(W_cur / W_ref, H_cur / H_ref);
