@@ -287,6 +287,8 @@
     const n = FAN_LEVEL[String(v).toLowerCase()];
     return n ? [0, 1, 2, 3].map(i => `<path d="M${5 + i * 4.7} 20v-${4 + i * 4}"${i < n ? '' : ' opacity=".25"'}/>`).join('') : null;
   }
+  // Slowest → fastest, auto (and unknown speeds) last
+  const byLevel = list => [...list].sort((x, y) => (FAN_LEVEL[x.toLowerCase()] || 9) - (FAN_LEVEL[y.toLowerCase()] || 9));
   // Angle of the airflow, 0 = straight out of the vent (vertical swing: −up/+down; horizontal: −right/+left)
   const AIM = { top: -50, middletop: -25, middle: 0, middlebottom: 25, bottom: 50,
                 left: 50, centerleft: 25, center: 0, centerright: -25, right: -50 };
@@ -338,7 +340,7 @@
           <button class="ha-round" data-act="temp+" aria-label="Raise">${icon('plus')}</button>
         </div>
         <div class="ha-label">Mode</div>${picChips([...(a.hvac_modes || [])].sort((x, y) => (y === 'off') - (x === 'off')), st.s, 'hvac', v => P[v === 'off' ? 'power' : MODE_ICON[v]] || null)}
-        ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${picChips(a.fan_modes, a.fan_mode, 'fan', fanPic)}` : ''}
+        ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${picChips(byLevel(a.fan_modes), a.fan_mode, 'fan', fanPic)}` : ''}
         ${a.swing_modes?.length ? `<div class="ha-label">Swing</div>${picChips(a.swing_modes, a.swing_mode, 'swing', v => swingPic(v, false))}` : ''}
         ${extrasHTML(dev)}`;
     } else if (d === 'media_player') {
