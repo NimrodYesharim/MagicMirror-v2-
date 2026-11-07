@@ -365,8 +365,17 @@ function setSleep(on) {
 
 btnSleep.addEventListener('click', () => setSleep(sleepOverlay.classList.contains('hidden')));
 
-// Tap the dark area to wake
-sleepOverlay.addEventListener('click', () => setSleep(false));
+// Wake on first contact: the IR frame's taps jitter, so Chromium often never turns them into a click
+sleepOverlay.addEventListener('pointerdown', () => {
+  if (!_sleeping) return;
+  setSleep(false);
+  // Keep the (black) overlay until the touch ends, so the rest of this tap can't press a widget.
+  // The display needs ~3 s to power up, so this costs nothing visible.
+  sleepOverlay.classList.remove('hidden');
+  const release = () => { if (!_sleeping) sleepOverlay.classList.add('hidden'); };
+  sleepOverlay.addEventListener('click', release, { once: true });
+  setTimeout(release, 700);  // no click arrives when the tap jittered
+});
 
 // ── Ring light ────────────────────────────────────────────────────────────────
 const ringOverlay = document.getElementById('ring-overlay');
