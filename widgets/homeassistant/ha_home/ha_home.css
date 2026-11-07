@@ -104,8 +104,8 @@
 
 /* A tile placed on the mirror fills its grid cell (small gutter, not .widget's big padding) */
 #widget-ha_home { padding: calc(6 * var(--wu)) !important; }
-/* Same vertical extent as a Hue card in the same rows (#widget-hue: padding 0 20 20); 6.5 per side = Hue's 13 gap */
-.widget[id^="widget-ha_tile:"] { padding: 0 calc(6.5 * var(--wu)) calc(20 * var(--wu)) !important; }
+/* Same vertical extent as a Hue card in the same rows (Hue gets .widget's !important 20 top/bottom); 6.5 per side = Hue's 13 gap */
+.widget[id^="widget-ha_tile:"] { padding: calc(20 * var(--wu)) calc(6.5 * var(--wu)) !important; }
 .widget[id^="widget-ha_tile:"] { display: flex; }
 .widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
 
