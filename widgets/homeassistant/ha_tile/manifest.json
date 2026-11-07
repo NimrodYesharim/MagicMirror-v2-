@@ -3,5 +3,6 @@
   "label": "Device tile",
   "wsType": null,
   "multi": true,
-  "basePath": "homeassistant/ha_tile"
+  "basePath": "homeassistant/ha_tile",
+  "settingsOrder": null
 }

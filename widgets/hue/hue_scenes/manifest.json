@@ -3,5 +3,8 @@
   "label": "Hue Scenes",
   "wsType": "hue_state",
   "basePath": "hue/hue_scenes",
-  "containerAttrs": { "data-wu-base": "120" }
+  "containerAttrs": {
+    "data-wu-base": "120"
+  },
+  "settingsOrder": null
 }

@@ -3,5 +3,6 @@
   "label": "Home (all devices)",
   "wsType": null,
   "optIn": true,
-  "basePath": "homeassistant/ha_home"
+  "basePath": "homeassistant/ha_home",
+  "settingsOrder": null
 }

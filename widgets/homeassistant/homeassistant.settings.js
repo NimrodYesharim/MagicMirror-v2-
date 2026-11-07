@@ -6,8 +6,13 @@ window.WidgetSettings = window.WidgetSettings || {};
   window.WidgetSettings['homeassistant'] = {
     label: 'Home Assistant',
 
+    // Everything Home Assistant in one tab: status on top, the rest in collapsible sections.
+    // Server + token start folded once they're set (rarely changed); devices stay open.
     section(cfg, H) {
       const { field, groupWrap, sectionWrap } = H;
+      const setUp = !!(cfg.url && cfg.token);
+      const fold = (title, body, folded) =>
+        groupWrap(title, body, true).replace('field-group collapsible', `field-group collapsible${folded ? ' collapsed' : ''}`);
       return sectionWrap('Home Assistant', `
         ${groupWrap('Status', `
           <div class="ha-status">
@@ -15,12 +20,15 @@ window.WidgetSettings = window.WidgetSettings || {};
             <span id="ha-status-text">Checking…</span>
             <button class="secondary-btn" id="ha-check">Check</button>
           </div>`)}
-        ${groupWrap('Server', `
+        ${fold('Server', `
           <div class="ha-list" id="ha-found"></div>
-          <button class="secondary-btn" id="ha-scan">${SCAN_LABEL}</button>`)}
-        ${groupWrap('Access Token', field('Long-lived access token', 'token', cfg.token, 'password',
-          'HA → Profile → Security → Long-lived access tokens'))}
-        ${groupWrap('Mirror Display Device', `<div id="ha-devices"></div>`)}
+          <button class="secondary-btn" id="ha-scan">${SCAN_LABEL}</button>`, setUp)}
+        ${fold('Access Token', field('Long-lived access token', 'token', cfg.token, 'password',
+          'HA → Profile → Security → Long-lived access tokens'), setUp)}
+        ${fold('Mirror Display Device', `<div id="ha-devices"></div>`, !!cfg.display_switch)}
+        ${fold('Devices on the Mirror', `
+          <div class="ha-hint">Shown in the Home card. To put one device anywhere on the mirror, add a device tile in the phone control panel → Layout.</div>
+          <div id="ha-home-devs"></div>`, false)}
       `);
     },
 
@@ -34,7 +42,26 @@ window.WidgetSettings = window.WidgetSettings || {};
       let found = saved;
       let entities = [], domain = '', picked = cfg.display_switch || '';
 
-      const collect = () => ({ ...cfg, url: `http://${host}:${port}`, token: $('[name=token]').value.trim(), display_switch: picked });
+      const toggles = () => [...el.querySelectorAll('[data-hadev]')];
+      const collect = () => ({
+        ...cfg, url: `http://${host}:${port}`, token: $('[name=token]').value.trim(), display_switch: picked,
+        // Device list not loaded (HA offline): keep the saved choice
+        hidden_devices: toggles().length ? toggles().filter(t => !t.checked).map(t => t.dataset.hadev) : (cfg.hidden_devices || []),
+      });
+
+      // ── Devices in the Home card (one switch each, by room) ──
+      const renderHomeDevices = async () => {
+        let d = null;
+        try { const r = await fetch('/api/homeassistant/devices'); if (r.ok) d = await r.json(); } catch {}
+        const devs = d?.devices || [];
+        if (!devs.length) { $('#ha-home-devs').innerHTML = '<div class="bridge-status">Available once Home Assistant is connected</div>'; return; }
+        const hidden = new Set(cfg.hidden_devices || []);
+        $('#ha-home-devs').innerHTML = [...new Set(devs.map(x => x.area))].map(area => `
+          <div class="ha-area-title">${H.esc(area)}</div>
+          ${devs.filter(x => x.area === area).map(x => `
+            <label class="ha-row ha-dev-row"><span>${H.esc(x.name)}</span><span class="ha-row-sub">${H.esc(x.entity)}</span>
+              <input type="checkbox" data-hadev="${H.esc(x.id)}"${hidden.has(x.id) ? '' : ' checked'}></label>`).join('')}`).join('');
+      };
 
       // ── Server choice ──
       const renderFound = () => {
@@ -126,7 +153,8 @@ window.WidgetSettings = window.WidgetSettings || {};
         refresh();  // server/token may have changed
       };
 
-      renderFound(); refresh(); scan();
+      H.bindCollapsibles(el);
+      renderFound(); refresh(); scan(); renderHomeDevices();
     },
   };
 })();
