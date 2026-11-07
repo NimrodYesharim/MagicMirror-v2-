@@ -204,6 +204,12 @@
 .ha-chip .ha-ic { font-size: 24px; }
 .ha-chip.pic { width: 60px; padding: 0; justify-content: center; }  /* picture-only option (word in title/aria-label) */
 .ha-chip.pic .ha-ic { font-size: 30px; }
+.ha-label b { font-weight: 500; color: #e8e8e8; text-transform: none; letter-spacing: 0; }  /* the selected value */
+.ha-settings { transition: opacity 0.25s; }
+.ha-settings.off { opacity: 0.45; }  /* AC off: fan/swing are remembered, not running */
+.ha-power.on { background: rgb(var(--rgb)); color: #000; }
+.ha-row-l { display: flex; align-items: center; gap: 14px; }
+.ha-row-l .ha-ic { font-size: 26px; color: #8e8e93; }
 .ha-chip.active { border-color: rgb(var(--rgb)); background: rgba(var(--rgb), 0.22); color: #fff; }
 .ha-detail-body:not([data-mode]) { --rgb: 10, 132, 255; }
 

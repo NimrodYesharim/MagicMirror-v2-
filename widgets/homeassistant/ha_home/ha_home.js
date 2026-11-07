@@ -2,31 +2,54 @@
 // This file holds the shared pieces (live store, tiles, device popup, Home card) and the
 // Home button widget. widgets/homeassistant/ha_tile/ha_tile.js places single device tiles.
 (() => {
-  // ── Icons (24×24, stroke) ──────────────────────────────────────────────────
+  // Lucide icons (lucide-static 0.460.0, ISC licence: https://lucide.dev/license): inner SVG of each 24x24 icon
   const P = {
-    power:  '<path d="M12 3v8"/><path d="M6.3 7.2a8 8 0 1 0 11.4 0"/>',
-    snow:   '<path d="M12 2v20M4.9 6l14.2 12M19.1 6 4.9 18"/><path d="m9 4 3 2 3-2M9 20l3-2 3 2"/>',
-    flame:  '<path d="M12 22c4 0 7-2.7 7-7 0-4-3-6.5-4-10-2 2-3 4-3 6-1.5-1-2-2.5-2-4-2.5 2-5 5-5 8 0 4.3 3 7 7 7Z"/>',
-    fan:    '<circle cx="12" cy="12" r="2"/><path d="M12 10c0-4 1-7 4-7 2 0 3 2 2 4l-4 4M14 12c4 0 7 1 7 4 0 2-2 3-4 2l-4-4M12 14c0 4-1 7-4 7-2 0-3-2-2-4l4-4M10 12c-4 0-7-1-7-4 0-2 2-3 4-2l4 4"/>',
-    drop:   '<path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12Z"/>',
-    auto:   '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>',
-    tv:     '<rect x="2" y="5" width="20" height="13" rx="2"/><path d="M8 21h8"/>',
-    speaker:'<rect x="5" y="2" width="14" height="20" rx="3"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="6.5" r="1"/>',
-    plug:   '<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8ZM12 18v4"/>',
-    play:   '<path d="M7 4v16l13-8Z"/>',
-    pause:  '<path d="M7 4h3v16H7zM14 4h3v16h-3z"/>',
-    next:   '<path d="M5 4v16l10-8ZM18 4v16"/>',
-    prev:   '<path d="M19 4v16L9 12ZM6 4v16"/>',
-    vol:    '<path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
-    mute:   '<path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 5 6M22 9l-5 6"/>',
-    run:    '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l5.5-3.5Z"/>',
-    home:   '<path d="M3 11 12 3l9 8"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>',
-    minus:  '<path d="M5 12h14"/>',
-    plus:   '<path d="M12 5v14M5 12h14"/>',
-    back:   '<path d="m15 5-7 7 7 7"/>',
-    close:  '<path d="M6 6l12 12M18 6 6 18"/>',
-    warn:   '<path d="M12 3 2 20h20Z"/><path d="M12 10v4M12 17v.5"/>',
-    check:  '<path d="m5 12 5 5 9-10"/>',
+    power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+    snow: '<line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/>',
+    flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    fan: '<path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 1 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 1-7.002 8.618l1.45-5.412Z"/><path d="M12 12v.01"/>',
+    drop: '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+    auto: '<path d="M10 9a3 3 0 1 0 0 6"/><path d="M2 12h1"/><path d="M14 21V3"/><path d="M10 4V3"/><path d="M10 21v-1"/><path d="m3.64 18.36.7-.7"/><path d="m4.34 6.34-.7-.7"/><path d="M14 12h8"/><path d="m17 4-3 3"/><path d="m14 17 3 3"/><path d="m21 15-3-3 3-3"/>',
+    fanauto: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+    tv: '<rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/>',
+    speaker: '<rect width="16" height="20" x="4" y="2" rx="2"/><path d="M12 6h.01"/><circle cx="12" cy="14" r="4"/><path d="M12 14h.01"/>',
+    plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+    play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+    pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+    next: '<polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/>',
+    prev: '<polygon points="19 20 9 12 19 4 19 20"/><line x1="5" x2="5" y1="19" y2="5"/>',
+    vol: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
+    mute: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>',
+    run: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+    home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    minus: '<path d="M5 12h14"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
+    close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    warn: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    timer: '<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
+    react: '<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>',
+    light: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+    filter: '<path d="M6 12H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 8h12"/><path d="M18.3 17.7a2.5 2.5 0 0 1-3.16 3.83 2.53 2.53 0 0 1-1.14-2V12"/><path d="M6.6 15.6A2 2 0 1 0 10 17v-5"/>',
+    fan1: '<path d="M2 20h.01"/><path d="M7 20v-4"/>',
+    fan2: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/>',
+    fan3: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/>',
+    fan4: '<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/>',
+    'move-up': '<path d="M8 6L12 2L16 6"/><path d="M12 2V22"/>',
+    'move-up-right': '<path d="M13 5H19V11"/><path d="M19 5L5 19"/>',
+    'move-right': '<path d="M18 8L22 12L18 16"/><path d="M2 12H22"/>',
+    'move-down-right': '<path d="M19 13V19H13"/><path d="M5 5L19 19"/>',
+    'move-down': '<path d="M8 18L12 22L16 18"/><path d="M12 2V22"/>',
+    'move-left': '<path d="M6 8L2 12L6 16"/><path d="M2 12H22"/>',
+    'move-down-left': '<path d="M11 19H5V13"/><path d="M19 5L5 19"/>',
+    'chevrons-up': '<path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/>',
+    'chevrons-down': '<path d="m7 6 5 5 5-5"/><path d="m7 13 5 5 5-5"/>',
+    'unfold-vertical': '<path d="M12 22v-6"/><path d="M12 8V2"/><path d="M4 12H2"/><path d="M10 12H8"/><path d="M16 12h-2"/><path d="M22 12h-2"/><path d="m15 19-3 3-3-3"/><path d="m15 5-3-3-3 3"/>',
+    'move-vertical': '<path d="M12 2v20"/><path d="m8 18 4 4 4-4"/><path d="m8 6 4-4 4 4"/>',
+    'arrow-left-right': '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+    'move-horizontal': '<path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/>',
+    'unfold-horizontal': '<path d="M16 12h6"/><path d="M8 12H2"/><path d="M12 2v2"/><path d="M12 8v2"/><path d="M12 14v2"/><path d="M12 20v2"/><path d="m19 15 3-3-3-3"/><path d="m5 9-3 3 3 3"/>',
   };
   const icon = (n, cls = '') => `<svg class="ha-ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[n] || ''}</svg>`;
 
@@ -282,32 +305,20 @@
 
   // ── Option pictures: fan speed → level bars, swing → airflow from the vent. null = no picture (keep the word) ──
   const FAN_LEVEL = { quiet: 1, low: 1, medium_low: 2, medium: 2, medium_high: 3, high: 3, strong: 4, turbo: 4 };
-  function fanPic(v) {
-    if (/auto/i.test(v)) return P.auto;
-    const n = FAN_LEVEL[String(v).toLowerCase()];
-    return n ? [0, 1, 2, 3].map(i => `<path d="M${5 + i * 4.7} 20v-${4 + i * 4}"${i < n ? '' : ' opacity=".25"'}/>`).join('') : null;
-  }
+  const fanPic = v => /auto/i.test(v) ? P.fanauto : P['fan' + FAN_LEVEL[String(v).toLowerCase()]] || null;
   // Slowest → fastest, auto (and unknown speeds) last
   const byLevel = list => [...list].sort((x, y) => (FAN_LEVEL[x.toLowerCase()] || 9) - (FAN_LEVEL[y.toLowerCase()] || 9));
-  // Angle of the airflow, 0 = straight out of the vent (vertical swing: −up/+down; horizontal: −right/+left)
-  const AIM = { top: -50, middletop: -25, middle: 0, middlebottom: 25, bottom: 50,
-                left: 50, centerleft: 25, center: 0, centerright: -25, right: -50 };
-  const SWEEP = { full: [-50, 50], top: [-50, -10], middle: [-25, 25], center: [-25, 25], bottom: [10, 50] };
-  const pt = (deg, r) => { const a = deg * Math.PI / 180; return `${(6 + r * Math.cos(a)).toFixed(1)} ${(12 + r * Math.sin(a)).toFixed(1)}`; };
-  const ray = deg => `M6 12L${pt(deg, 14)}`;
-  function swingPic(v, horizontal) {
-    const [, kind = '', where] = /^(fixed|range)?(.*)$/i.exec(v).map(s => s?.toLowerCase());
-    let d;
-    if (where === 'stopped' || where === 'off') d = 'M11 9l5 6M16 9l-5 6';
-    else if (kind === 'fixed' && where === 'leftright') d = ray(50) + ray(-50);
-    else if (kind === 'fixed' && where in AIM) d = ray(AIM[where]);
-    else if (kind === 'range' && SWEEP[where]) {
-      const [a, b] = SWEEP[where];
-      d = ray(a) + ray(b) + `M${pt(a, 10)}A10 10 0 0 1 ${pt(b, 10)}`;
-    } else return null;
-    const g = `<path d="M4 7v10"/><path d="${d}"/>`;  // the vent, then the air
-    return horizontal ? `<g transform="rotate(90 12 12)">${g}</g>` : g;
-  }
+  // Airflow direction: arrow = fixed, double arrow / chevrons = sweep. Vertical blows out sideways, horizontal from above.
+  const SWING_V = { stopped: 'pause', fixedtop: 'move-up', fixedmiddletop: 'move-up-right', fixedmiddle: 'move-right',
+    fixedmiddlebottom: 'move-down-right', fixedbottom: 'move-down', rangetop: 'chevrons-up', rangemiddle: 'unfold-vertical',
+    rangebottom: 'chevrons-down', rangefull: 'move-vertical' };
+  const SWING_H = { stopped: 'pause', fixedleft: 'move-left', fixedcenterleft: 'move-down-left', fixedcenter: 'move-down',
+    fixedcenterright: 'move-down-right', fixedright: 'move-right', fixedleftright: 'arrow-left-right',
+    rangefull: 'move-horizontal', rangecenter: 'unfold-horizontal' };
+  const swingPic = (v, horizontal) => P[(horizontal ? SWING_H : SWING_V)[String(v).toLowerCase()]] || null;
+  // Section title with the current value: the chips are pictures, so say what's selected
+  const label = (title, v) => `<div class="ha-label">${esc(title)}${v ? ` <b>· ${esc(pretty(v))}</b>` : ''}</div>`;
+
   // Icon-only chip when the value has a picture; the word stays as its accessible name and tooltip
   function picChips(list, current, attr, picFn, extra = '') {
     return `<div class="ha-chips">${list.map(v => {
@@ -328,21 +339,25 @@
     const head = `<div class="ha-head">
       ${back ? `<button class="ha-icon-btn" data-act="back">${icon('back')}</button>` : ''}
       <div class="ha-head-title"><div${textAttrs(dev.name)}>${esc(dev.name)}</div><span>${esc(dev.area)}</span></div>
+      ${d === 'climate' ? `<button class="ha-icon-btn ha-power${st.s !== 'off' ? ' on' : ''}" data-mode="${esc(st.s)}" data-act="power" aria-label="Power">${icon('power')}</button>` : ''}
       <button class="ha-icon-btn" data-act="close">${icon('close')}</button>
     </div>`;
     let body = '';
     if (d === 'climate') {
-      const on = st.s !== 'off';
+      const on = st.s !== 'off', ex = extrasHTML(dev);
       body = `
         <div class="ha-thermo${on ? '' : ' off'}" data-mode="${esc(st.s)}">
           <button class="ha-round" data-act="temp-" aria-label="Lower">${icon('minus')}</button>
           <div class="ha-temp"><b>${a.temperature ?? '–'}°</b><span>${a.current_temperature != null ? `${a.current_temperature}° in the room` : ''}</span></div>
           <button class="ha-round" data-act="temp+" aria-label="Raise">${icon('plus')}</button>
         </div>
-        <div class="ha-label">Mode</div>${picChips([...(a.hvac_modes || [])].sort((x, y) => (y === 'off') - (x === 'off')), st.s, 'hvac', v => P[v === 'off' ? 'power' : MODE_ICON[v]] || null)}
-        ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${picChips(byLevel(a.fan_modes), a.fan_mode, 'fan', fanPic)}` : ''}
-        ${a.swing_modes?.length ? `<div class="ha-label">Swing</div>${picChips(a.swing_modes, a.swing_mode, 'swing', v => swingPic(v, false))}` : ''}
-        ${extrasHTML(dev)}`;
+        ${label('Mode', st.s)}${picChips((a.hvac_modes || []).filter(m => m !== 'off'), st.s, 'hvac', v => P[MODE_ICON[v]] || null)}
+        <div class="ha-settings${on ? '' : ' off'}">
+          ${a.fan_modes?.length ? label('Fan', a.fan_mode) + picChips(byLevel(a.fan_modes), a.fan_mode, 'fan', fanPic) : ''}
+          ${a.swing_modes?.length ? label('Swing', a.swing_mode) + picChips(a.swing_modes, a.swing_mode, 'swing', v => swingPic(v, false)) : ''}
+          ${ex.settings}
+        </div>
+        ${ex.rest}`;
     } else if (d === 'media_player') {
       const f = a.supported_features || 0, on = !['off', 'unavailable', 'standby'].includes(st.s);
       const art = a.pic && on ? `/api/homeassistant/art/${encodeURIComponent(e)}?v=${a.pic}` : null;
@@ -370,22 +385,29 @@
     bindDevice(c, dev, back);
   }
 
-  // The device's other entities (AC: Climate React, timer, horizontal swing, unit light, filter)
+  // The device's other entities (AC: horizontal swing, Timer, Climate React, unit light, filter), grouped:
+  // `settings` = option pickers (shown with fan/swing), `rest` = switches, then filter care at the bottom
+  const EXTRA_ICON = [[/timer/i, 'timer'], [/react/i, 'react'], [/light/i, 'light']];
   function extrasHTML(dev) {
-    const rows = dev.extras.map(([x, label]) => {
+    const onOff = x => domainOf(x) === 'select' && (HA.st(x).a?.options || []).length === 2 && HA.st(x).a.options.includes('on');
+    const rank = x => ({ select: onOff(x) ? 1 : 0, switch: 1, binary_sensor: 2, button: 3 }[domainOf(x)] ?? 4);
+    const html = ([x, name]) => {
       const d = domainOf(x), st = HA.st(x), a = st.a || {};
-      if (d === 'switch' || (d === 'select' && a.options?.length === 2 && a.options.includes('on'))) {
-        return `<label class="ha-row"><span>${esc(label)}</span>
+      if (d === 'switch' || onOff(x)) {
+        const ic = EXTRA_ICON.find(([re]) => re.test(x) || re.test(name))?.[1];
+        return `<label class="ha-row"><span class="ha-row-l">${ic ? icon(ic) : ''}<span>${esc(name)}</span></span>
           <input type="checkbox" class="ha-switch" data-extra="${esc(x)}"${st.s === 'on' ? ' checked' : ''}${st.s === 'unavailable' ? ' disabled' : ''}></label>`;
       }
-      if (d === 'select') return `<div class="ha-label">${esc(label)}</div>${/swing/i.test(x)
-        ? picChips(a.options || [], st.s, 'option', v => swingPic(v, /horizontal/i.test(x)), `data-select="${esc(x)}" `)
-        : chips(a.options || [], st.s, 'option', pretty).replace(/data-option=/g, `data-select="${esc(x)}" data-option=`)}`;
-      if (d === 'binary_sensor') return st.s === 'on' ? `<div class="ha-row warn">${icon('warn')}<span>${esc(label)}</span></div>` : '';
-      if (d === 'button') return `<button class="ha-wide hold" data-press="${esc(x)}"><span class="ha-hold-fill"></span><span>Hold to ${esc(label.toLowerCase())}</span></button>`;
+      if (d === 'select') return /swing/i.test(x)
+        ? label(name, st.s) + picChips(a.options || [], st.s, 'option', v => swingPic(v, /horizontal/i.test(x)), `data-select="${esc(x)}" `)
+        : label(name) + chips(a.options || [], st.s, 'option', pretty).replace(/data-option=/g, `data-select="${esc(x)}" data-option=`);
+      if (d === 'binary_sensor') return st.s === 'on' ? `<div class="ha-row warn">${icon('warn')}<span>${esc(name)}</span></div>` : '';
+      if (d === 'button') return `<button class="ha-wide hold" data-press="${esc(x)}"><span class="ha-hold-fill"></span>${icon('filter')}<span>Hold to ${esc(name.toLowerCase())}</span></button>`;
       return '';
-    }).join('');
-    return rows ? `<div class="ha-extras">${rows}</div>` : '';
+    };
+    const sorted = [...dev.extras].sort((p, q) => rank(p[0]) - rank(q[0]));
+    const rest = sorted.filter(([x]) => rank(x) > 0).map(html).join('');
+    return { settings: sorted.filter(([x]) => rank(x) === 0).map(html).join(''), rest: rest ? `<div class="ha-extras">${rest}</div>` : '' };
   }
 
   function bindDevice(c, dev, back) {
@@ -432,6 +454,10 @@
     act('playpause', () => HA.call(e, 'media_play_pause', {}, { s: st().s === 'playing' ? 'paused' : 'playing' }));
     act('mute', () => HA.call(e, 'volume_mute', { is_volume_muted: !st().a.is_volume_muted }, { a: { is_volume_muted: !st().a.is_volume_muted } }));
     act('power', () => {
+      if (domainOf(e) === 'climate') {
+        const off = st().s === 'off';
+        return HA.call(e, off ? 'turn_on' : 'turn_off', {}, { s: off ? 'cool' : 'off' });
+      }
       const on = !['off', 'unavailable', 'standby'].includes(st().s);
       HA.call(e, on ? 'turn_off' : 'turn_on', {}, { s: on ? 'off' : 'on' });
     });
