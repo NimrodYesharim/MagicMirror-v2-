@@ -2,23 +2,26 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: calc(4 * var(--wu));
+  gap: calc(4 * var(--dt));
   height: 100%;
   width: 100%;
+  /* One size knob for time + date together; 0.8 fits the longest date ("Wednesday, 30 September 2026") on one line */
+  --dt: calc(0.8 * var(--wu));
 }
 
 .dt-time {
-  font-size: calc(110 * var(--wu));
+  font-size: calc(110 * var(--dt));
   font-weight: 700;
-  letter-spacing: calc(-2 * var(--wu));
+  letter-spacing: calc(-2 * var(--dt));
   line-height: 1;
 }
 
 .dt-date {
-  font-size: calc(45 * var(--wu));
+  font-size: calc(45 * var(--dt));
+  white-space: nowrap;
   font-weight: 300;
   color: #bbb;
-  letter-spacing: calc(0.5 * var(--wu));
+  letter-spacing: calc(0.5 * var(--dt));
 }
 
 .dt-secs {
