@@ -26,7 +26,8 @@
 .ha-home-sum { color: #30d158; font-size: calc(13 * var(--wu)); min-height: 1em; }
 
 .ha-ic { width: 1em; height: 1em; flex-shrink: 0; }
-.rtl { font-family: 'Rubik', 'SFPro', sans-serif; }
+/* Hebrew names read right-to-left but stay left-aligned with the rest of the tile */
+.ha-tile [dir="rtl"], .ha-card [dir="rtl"] { font-family: 'Rubik', 'SFPro', sans-serif; text-align: left; }
 
 /* ── Tile ── */
 .ha-tile {
@@ -101,7 +102,8 @@
 }
 .holding .ha-tile-hold, .holding .ha-hold-fill { transform: scaleX(1); transition: transform 0.8s linear; }
 
-/* A tile placed on the mirror fills its grid cell */
+/* A tile placed on the mirror fills its grid cell (small gutter, not .widget's big padding) */
+.widget[id^="widget-ha_tile:"], #widget-ha_home { padding: calc(6 * var(--wu)) !important; }
 .widget[id^="widget-ha_tile:"] { display: flex; }
 .widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
 
@@ -112,7 +114,7 @@
   display: flex; flex-direction: column;
   font-family: 'SFPro', 'Rubik', sans-serif;
 }
-#modal-card.ha-detail { width: 720px; }
+#modal-card.ha-detail { width: 760px; }
 .ha-card .ha-tile { --u: 1.45px; aspect-ratio: 1.15; }
 .ha-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 .ha-head-title { flex: 1; min-width: 0; }
@@ -151,10 +153,10 @@
 .ha-round.big { width: 120px; height: 120px; font-size: 52px; background: #fff; color: #000; }
 
 .ha-label { margin: 18px 4px 10px; font-size: 16px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #8e8e93; }
-.ha-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.ha-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .ha-chip {
   display: flex; align-items: center; gap: 8px;
-  min-height: 60px; padding: 0 20px;
+  min-height: 60px; padding: 0 16px;
   border-radius: 30px; border: 2px solid transparent;
   background: rgba(255, 255, 255, 0.08); color: #e8e8e8;
   font: 500 19px 'SFPro', 'Rubik', sans-serif; cursor: pointer;

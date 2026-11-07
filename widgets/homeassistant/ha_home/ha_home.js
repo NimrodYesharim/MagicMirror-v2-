@@ -32,7 +32,7 @@
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const HEB = /[֐-׿]/;
-  const textAttrs = s => HEB.test(s) ? ' dir="rtl" class="rtl"' : '';
+  const textAttrs = s => HEB.test(s) ? ' dir="rtl"' : '';
   const domainOf = e => e.split('.', 1)[0];
   // "fixedMiddleTop" / "fan_only" / "heat_cool" → readable
   const MODE_LABEL = { heat_cool: 'Auto', fan_only: 'Fan', dry: 'Dry', cool: 'Cool', heat: 'Heat', off: 'Off', auto: 'Auto' };
@@ -301,7 +301,7 @@
           <div class="ha-temp"><b>${a.temperature ?? '–'}°</b><span>${a.current_temperature != null ? `${a.current_temperature}° in the room` : ''}</span></div>
           <button class="ha-round" data-act="temp+" aria-label="Raise">${icon('plus')}</button>
         </div>
-        <div class="ha-label">Mode</div>${chips(a.hvac_modes || [], st.s, 'hvac', pretty, v => v === 'off' ? 'power' : MODE_ICON[v])}
+        <div class="ha-label">Mode</div>${chips([...(a.hvac_modes || [])].sort((x, y) => (y === 'off') - (x === 'off')), st.s, 'hvac', pretty, v => v === 'off' ? 'power' : MODE_ICON[v])}
         ${a.fan_modes?.length ? `<div class="ha-label">Fan</div>${chips(a.fan_modes, a.fan_mode, 'fan')}` : ''}
         ${a.swing_modes?.length ? `<div class="ha-label">Swing</div>${chips(a.swing_modes, a.swing_mode, 'swing')}` : ''}
         ${extrasHTML(dev)}`;
