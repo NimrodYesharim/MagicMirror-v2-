@@ -1,0 +1,7 @@
+{
+  "name": "ha_tile",
+  "label": "Device tile",
+  "wsType": null,
+  "multi": true,
+  "basePath": "homeassistant/ha_tile"
+}

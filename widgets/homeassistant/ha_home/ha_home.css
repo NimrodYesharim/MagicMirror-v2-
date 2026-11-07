@@ -1,0 +1,213 @@
+/* Home Assistant devices — Home button, device tiles, Home card and device popup.
+   Tiles size in --u: var(--wu) on the mirror (scales with its cell), fixed px inside the popup.
+   Colours are `--rgb` triplets: the Pi's Chromium 104 has no color-mix() or :has(). */
+[data-mode]                     { --rgb: 48, 209, 88; }
+[data-mode="cool"]              { --rgb: 10, 132, 255; }
+[data-mode="heat"]              { --rgb: 255, 159, 10; }
+[data-mode="fan_only"]          { --rgb: 100, 210, 255; }
+[data-mode="dry"]               { --rgb: 90, 200, 250; }
+[data-mode="heat_cool"]         { --rgb: 191, 90, 242; }
+
+#widget-ha_home { display: flex; align-items: center; justify-content: center; }
+
+.ha-home-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(6 * var(--wu));
+  width: 100%; height: 100%; max-width: calc(220 * var(--wu));
+  border-radius: calc(40 * var(--wu));
+  border: calc(3 * var(--wu)) solid #1e1e1e;
+  background: #0c0c0c;
+  color: #e8e8e8;
+  font: 500 calc(17 * var(--wu)) 'SFPro', 'Rubik', sans-serif;
+  cursor: pointer;
+}
+.ha-home-btn .ha-ic { width: calc(44 * var(--wu)); height: calc(44 * var(--wu)); color: #8e8e93; }
+.ha-home-btn:active { background: #161616; }
+.ha-home-sum { color: #30d158; font-size: calc(13 * var(--wu)); min-height: 1em; }
+
+.ha-ic { width: 1em; height: 1em; flex-shrink: 0; }
+.rtl { font-family: 'Rubik', 'SFPro', sans-serif; }
+
+/* ── Tile ── */
+.ha-tile {
+  --u: var(--wu);
+  position: relative;
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  padding: calc(16 * var(--u)) calc(18 * var(--u));
+  border-radius: calc(32 * var(--u));
+  border: calc(2.5 * var(--u)) solid #1e1e1e;
+  background: #0c0c0c;
+  color: #e8e8e8;
+  font-family: 'SFPro', 'Rubik', sans-serif;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.25s, opacity 0.25s;
+}
+.ha-tile.on { border-color: rgba(var(--rgb), 0.45); }
+.ha-tile.unavailable { opacity: 0.4; }
+.ha-tile.pending .ha-tile-icon { animation: ha-pulse 0.9s ease-in-out infinite alternate; }
+@keyframes ha-pulse { from { opacity: 0.35; } to { opacity: 1; } }
+.ha-tile.error { animation: ha-shake 0.4s; border-color: #ff453a; }
+@keyframes ha-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+.ha-tile-art {
+  position: absolute; inset: 0;
+  background: center / cover no-repeat;
+  opacity: 0.28;
+  pointer-events: none;
+}
+.ha-tile-top { position: relative; display: flex; justify-content: space-between; align-items: flex-start; }
+.ha-tile-icon { display: flex; color: #4a4a4a; font-size: calc(30 * var(--u)); transition: color 0.25s; }
+.ha-tile.on .ha-tile-icon { color: rgb(var(--rgb)); }
+.ha-tile-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: calc(44 * var(--u)); height: calc(44 * var(--u));
+  margin: calc(-4 * var(--u)) calc(-6 * var(--u)) 0 0;
+  border-radius: 50%; border: none;
+  background: #1c1c1e; color: #8e8e93;
+  font-size: calc(22 * var(--u));
+  cursor: pointer;
+}
+.ha-tile-btn[hidden] { display: none; }
+.ha-tile.on .ha-tile-btn { background: rgb(var(--rgb)); color: #000; }
+.ha-tile-main {
+  position: relative;
+  margin-top: auto;
+  font-size: calc(34 * var(--u)); font-weight: 300; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ha-tile-main:empty { display: none; }
+.ha-tile-name, .ha-tile-sub {
+  position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ha-tile-main:empty + .ha-tile-name { margin-top: auto; }
+.ha-tile-name { margin-top: calc(6 * var(--u)); font-size: calc(17 * var(--u)); font-weight: 500; }
+.ha-tile-sub  { font-size: calc(13 * var(--u)); color: #8e8e93; }
+.ha-tile-warn {
+  position: absolute; top: calc(14 * var(--u)); right: calc(66 * var(--u));
+  color: #ffd60a; font-size: calc(20 * var(--u)); display: flex;
+}
+.ha-tile-warn[hidden] { display: none; }
+.ha-tile.done { border-color: #30d158; }
+
+/* Hold to confirm (mirror power socket, filter reset): a fill sweeps across while held */
+.ha-tile-hold, .ha-hold-fill {
+  position: absolute; inset: 0;
+  background: rgba(255, 69, 58, 0.22);
+  transform: scaleX(0); transform-origin: left;
+  pointer-events: none;
+}
+.holding .ha-tile-hold, .holding .ha-hold-fill { transform: scaleX(1); transition: transform 0.8s linear; }
+
+/* A tile placed on the mirror fills its grid cell */
+.widget[id^="widget-ha_tile:"] { display: flex; }
+.widget[id^="widget-ha_tile:"] > .ha-tile { flex: 1; }
+
+/* ── Popup (inside the shared #modal-card) ── */
+#modal-card.ha-card {
+  width: 940px; max-width: 94%; max-height: 86%;
+  padding: 32px;
+  display: flex; flex-direction: column;
+  font-family: 'SFPro', 'Rubik', sans-serif;
+}
+#modal-card.ha-detail { width: 720px; }
+.ha-card .ha-tile { --u: 1.45px; aspect-ratio: 1.15; }
+.ha-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.ha-head-title { flex: 1; min-width: 0; }
+.ha-head-title div { font-size: 34px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ha-head-title span { font-size: 17px; color: #8e8e93; }
+.ha-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: rgba(255, 255, 255, 0.08); color: #e8e8e8;
+  font-size: 28px; cursor: pointer;
+}
+.ha-home-body, .ha-detail-body { overflow-y: auto; scrollbar-width: none; min-height: 0; }
+.ha-home-body::-webkit-scrollbar, .ha-detail-body::-webkit-scrollbar { display: none; }
+.ha-area { margin: 8px 4px 12px; font-size: 20px; font-weight: 600; color: #8e8e93; }
+.ha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+.ha-empty { padding: 60px 0; text-align: center; color: #8e8e93; font-size: 20px; }
+
+/* Climate */
+.ha-thermo {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 8px 26px;
+}
+.ha-temp { display: flex; flex-direction: column; align-items: center; }
+.ha-temp b { font-size: 120px; font-weight: 200; line-height: 1; font-variant-numeric: tabular-nums; color: rgb(var(--rgb)); }
+.ha-thermo.off .ha-temp b { color: #636366; }
+.ha-temp span { margin-top: 8px; font-size: 18px; color: #8e8e93; }
+.ha-round {
+  display: flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: rgba(255, 255, 255, 0.08); color: #fff;
+  font-size: 40px; cursor: pointer;
+}
+.ha-round:active, .ha-icon-btn:active, .ha-chip:active, .ha-wide:active { background: rgba(255, 255, 255, 0.18); }
+.ha-round.big { width: 120px; height: 120px; font-size: 52px; background: #fff; color: #000; }
+
+.ha-label { margin: 18px 4px 10px; font-size: 16px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #8e8e93; }
+.ha-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.ha-chip {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 60px; padding: 0 20px;
+  border-radius: 30px; border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.08); color: #e8e8e8;
+  font: 500 19px 'SFPro', 'Rubik', sans-serif; cursor: pointer;
+}
+.ha-chip .ha-ic { font-size: 24px; }
+.ha-chip.active { border-color: rgb(var(--rgb)); background: rgba(var(--rgb), 0.22); color: #fff; }
+.ha-detail-body:not([data-mode]) { --rgb: 10, 132, 255; }
+
+.ha-extras { margin-top: 22px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 8px; }
+.ha-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  min-height: 68px; font-size: 20px;
+}
+.ha-row.warn { justify-content: flex-start; color: #ffd60a; }
+.ha-row.warn .ha-ic { font-size: 26px; }
+.ha-switch {
+  appearance: none; position: relative; flex-shrink: 0;
+  width: 76px; height: 44px; border-radius: 22px;
+  background: #39393d; cursor: pointer; transition: background 0.2s;
+}
+.ha-switch::after {
+  content: ''; position: absolute; top: 4px; left: 4px;
+  width: 36px; height: 36px; border-radius: 50%; background: #fff;
+  transition: transform 0.2s;
+}
+.ha-switch:checked { background: #30d158; }
+.ha-switch:checked::after { transform: translateX(32px); }
+.ha-switch:disabled { opacity: 0.4; }
+.ha-wide {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; min-height: 72px; margin-top: 16px;
+  border-radius: 20px; border: none;
+  background: rgba(255, 255, 255, 0.08); color: #e8e8e8;
+  font: 500 20px 'SFPro', 'Rubik', sans-serif; cursor: pointer;
+}
+.ha-wide .ha-ic { font-size: 26px; }
+.ha-wide.primary { background: #30d158; color: #000; }
+.ha-wide.done { background: rgba(48, 209, 88, 0.3); }
+
+/* Media */
+.ha-media { display: flex; align-items: center; gap: 24px; margin-bottom: 26px; }
+.ha-media-art {
+  display: flex; align-items: center; justify-content: center;
+  width: 160px; height: 160px; flex-shrink: 0;
+  border-radius: 20px; background: #1c1c1e center / cover no-repeat;
+  color: #636366; font-size: 72px;
+}
+.ha-media-text { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ha-media-text b { font-size: 28px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ha-media-text span { font-size: 19px; color: #8e8e93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ha-transport { display: flex; justify-content: center; align-items: center; gap: 36px; margin: 8px 0 26px; }
+.ha-volume { display: flex; align-items: center; gap: 18px; font-size: 28px; color: #8e8e93; }
+.ha-range { flex: 1; height: 60px; accent-color: #fff; }
+
+.ha-card.pending .ha-head-title span::after { content: ' · updating…'; }

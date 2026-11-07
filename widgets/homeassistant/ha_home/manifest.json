@@ -1,0 +1,7 @@
+{
+  "name": "ha_home",
+  "label": "Home (all devices)",
+  "wsType": null,
+  "optIn": true,
+  "basePath": "homeassistant/ha_home"
+}

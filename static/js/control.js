@@ -295,12 +295,31 @@ document.getElementById('btn-shutdown').addEventListener('click', async () => {
 // ── Layout Editor ─────────────────────────────────────────────────────────────
 const WIDGET_COLORS = {
   datetime: '#0A84FF', weather: '#FF9F0A', calendar: '#BF5AF2',
-  hue: '#FFD60A', news: '#30D158', redalert: '#FF453A',
+  hue: '#FFD60A', news: '#30D158', redalert: '#FF453A', ha_home: '#64D2FF',
 };
 const WIDGET_NAMES = {
   datetime: 'Date & Time', weather: 'Weather', calendar: 'Calendar',
-  hue: 'Hue', news: 'News', redalert: 'Red Alert',
+  hue: 'Hue', news: 'News', redalert: 'Red Alert', ha_home: 'Home button',
 };
+const OPT_IN = new Set(['ha_home']);   // hidden on the mirror unless a layout places it
+const HA_TILE = 'ha_tile:';            // + entity_id: one Home Assistant device, placed anywhere
+const TILE_COLOR = '#5E5CE6';
+
+let _haDevices = null;  // /api/homeassistant/devices, for device names and the tile picker
+async function loadHADevices() {
+  try { const r = await fetch('/api/homeassistant/devices'); if (r.ok) _haDevices = await r.json(); } catch {}
+  return _haDevices || { devices: [], states: {}, hidden: [] };
+}
+const haName = entity => _haDevices?.devices?.find(d => d.entity === entity)?.name || entity;
+
+// Every widget the editor shows for this template: the fixed ones, then its device tiles
+function layoutEntries() {
+  const tiles = Object.keys(getTplWidgets()).filter(k => k.startsWith(HA_TILE))
+    .map(k => [k, haName(k.slice(HA_TILE.length))]);
+  return [...Object.entries(WIDGET_NAMES), ...tiles];
+}
+const posOf = key => getTplWidgets()[key] || (OPT_IN.has(key) ? { row: '1/1', column: '1/1' } : {});
+const colorOf = key => key.startsWith(HA_TILE) ? TILE_COLOR : (WIDGET_COLORS[key] || '#888');
 
 function parsePos(posStr) {
   if (!posStr) return [1, 2];
@@ -325,6 +344,7 @@ function initLayoutEditor() {
 }
 
 function _startEdit() {
+  if (!_haDevices) loadHADevices().then(() => { renderLayoutPreview(); renderWidgetList(); });  // tile names
   _editLayout = JSON.parse(JSON.stringify(_layout));
   _editTpl    = _editLayout.current || Object.keys(_editLayout.templates || {})[0] || '';
   _selWidget  = null;
@@ -387,8 +407,8 @@ function renderLayoutPreview() {
   const cw = W / 12, rh = H / 24;
   // remove old widget elements (keep ::before grid lines)
   preview.querySelectorAll('.preview-widget').forEach(e => e.remove());
-  Object.entries(WIDGET_NAMES).forEach(([key]) => {
-    const pos = widgets[key] || {};
+  layoutEntries().forEach(([key, name]) => {
+    const pos = posOf(key);
     const [rs, re] = parsePos(pos.row    || '1/2');
     const [cs, ce] = parsePos(pos.column || '1/2');
     const hidden = isHidden(pos);
@@ -400,7 +420,8 @@ function renderLayoutPreview() {
     div.className = `preview-widget${hidden ? ' hidden' : ''}${_selWidget === key ? ' selected' : ''}`;
     div.dataset.w = key;
     div.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px`;
-    if (width > 28 && height > 10) div.textContent = key.substring(0, 3).toUpperCase();
+    if (width > 28 && height > 10) div.textContent = (key.startsWith(HA_TILE) ? name : key).substring(0, 3).toUpperCase();
+    if (key.startsWith(HA_TILE)) div.style.background = TILE_COLOR;
     div.addEventListener('click', () => selectWidget(key));
     preview.appendChild(div);
   });
@@ -410,10 +431,10 @@ function renderWidgetList() {
   const list = document.getElementById('layout-widget-list');
   if (!list) return;
   const widgets = getTplWidgets();
-  list.innerHTML = Object.entries(WIDGET_NAMES).map(([key, name]) => {
-    const pos    = widgets[key] || {};
+  list.innerHTML = layoutEntries().map(([key, name]) => {
+    const pos    = posOf(key);
     const hidden = isHidden(pos);
-    const color  = WIDGET_COLORS[key] || '#888';
+    const color  = colorOf(key);
     const sel    = _selWidget === key;
     return `<div class="widget-row${sel ? ' selected' : ''}" data-wkey="${esc(key)}">
       <span class="widget-color-dot" style="background:${color}"></span>
@@ -423,7 +444,8 @@ function renderWidgetList() {
         <span class="ios-toggle-track"></span>
       </label>
     </div>`;
-  }).join('');
+  }).join('') + `<button class="tpl-pill add-pill" id="btn-add-tile" style="align-self:flex-start;margin-top:4px">+ Device tile</button>`;
+  document.getElementById('btn-add-tile').onclick = addDeviceTile;
 
   list.querySelectorAll('.widget-row').forEach(row => {
     row.addEventListener('click', e => {
@@ -464,8 +486,15 @@ function showEditPanel(key) {
   const pos     = widgets[key] || { row: '1/5', column: '1/13' };
   const [rs, re] = parsePos(pos.row    || '1/5');
   const [cs, ce] = parsePos(pos.column || '1/13');
-  document.getElementById('ep-title').textContent = WIDGET_NAMES[key] || key;
-  document.getElementById('ep-color-dot').style.background = WIDGET_COLORS[key] || '#888';
+  document.getElementById('ep-title').textContent = key.startsWith(HA_TILE) ? haName(key.slice(HA_TILE.length)) : (WIDGET_NAMES[key] || key);
+  document.getElementById('ep-color-dot').style.background = colorOf(key);
+  const rm = document.getElementById('ep-remove');
+  rm.hidden = !key.startsWith(HA_TILE);
+  rm.onclick = () => {
+    delete getTplWidgets()[key];
+    _selWidget = null;
+    hideEditPanel(); renderLayoutPreview(); renderWidgetList();
+  };
   setSlider('ep-row-start', 'ep-rs-val', rs, 1,  24);
   setSlider('ep-row-end',   'ep-re-val', re, 2,  25);
   setSlider('ep-col-start', 'ep-cs-val', cs, 1,  12);
@@ -499,6 +528,32 @@ function commitWidgetEdit() {
   widgets[_selWidget].row    = `${rs}/${Math.max(re, rs + 1)}`;
   widgets[_selWidget].column = `${cs}/${Math.max(ce, cs + 1)}`;
   renderLayoutPreview();
+}
+
+// Pick a Home Assistant device and drop it on this layout as its own tile
+async function addDeviceTile() {
+  const data = await loadHADevices();
+  pushDetail('Add device tile', body => {
+    const used = new Set(Object.keys(getTplWidgets()));
+    const areas = [...new Set(data.devices.map(d => d.area))];
+    body.innerHTML = data.devices.length ? areas.map(a => `
+      <div class="sec-header">${esc(a)}</div>
+      <div class="card">${data.devices.filter(d => d.area === a).map(d => `
+        <div class="row tap" data-add="${esc(d.entity)}">
+          <div class="row-body"><div class="row-label">${esc(d.name)}</div><div class="row-sublabel">${esc(d.entity)}</div></div>
+          ${used.has(HA_TILE + d.entity) ? '<div class="row-value">On layout</div>' : ''}
+        </div>`).join('')}
+      </div>`).join('') + '<div class="sec-footer">The tile appears at the top left: move and resize it, then Save Layout.</div>'
+      : '<div class="sec-footer">No devices yet: set up Home Assistant in Settings first.</div>';
+    body.querySelectorAll('[data-add]').forEach(r => r.onclick = () => {
+      const key = HA_TILE + r.dataset.add;
+      const tpl = _editLayout.templates[_editTpl];
+      tpl.widgets = tpl.widgets || {};
+      if (!tpl.widgets[key]) tpl.widgets[key] = { row: '1/3', column: '1/4' };
+      popDetail();
+      selectWidget(key);
+    });
+  }, null);
 }
 
 function hideEditPanel() {
@@ -583,7 +638,7 @@ document.querySelectorAll('#p-settings [data-section]').forEach(row => {
 
 async function openSettings(section) {
   // load config if needed
-  const apiSections = ['weather', 'calendar', 'news', 'hue', 'display', 'redalert'];
+  const apiSections = ['weather', 'calendar', 'news', 'hue', 'display', 'redalert', 'homeassistant'];
   if (apiSections.includes(section) && !_configs[section]) {
     try {
       const r = await fetch(`/api/config/${section}`);
@@ -598,17 +653,18 @@ async function openSettings(section) {
     hue:         renderHueSettings,
     display:     renderDisplaySettings,
     redalert:    renderRedalertSettings,
+    homeassistant: renderHASettings,
     setup:       renderSetupSection,
     'server-info': renderServerInfoSection,
   };
 
   const titles = {
     weather: 'Weather', calendar: 'Calendar', news: 'News',
-    hue: 'Hue Lights', display: 'Display', redalert: 'Red Alert',
+    hue: 'Hue Lights', display: 'Display', redalert: 'Red Alert', homeassistant: 'Home Assistant',
     setup: 'Certificate', 'server-info': 'Server Info',
   };
 
-  const hasSave = ['weather','calendar','news','hue','display','redalert'].includes(section);
+  const hasSave = ['weather','calendar','news','hue','display','redalert','homeassistant'].includes(section);
 
   pushDetail(
     titles[section] || section,
@@ -627,6 +683,7 @@ function updateSettingsSummaries() {
     news:     _configs.news?.country || '',
     hue:      _configs.hue?.bridge_ip || '',
     redalert: _configs.redalert?.enabled ? 'On' : 'Off',
+    homeassistant: (/^https?:\/\/([^/:]+)/.exec(_configs.homeassistant?.url || '') || [])[1] || '',
   };
   Object.entries(sums).forEach(([k, v]) => {
     const el = document.getElementById(`sval-${k}`);
@@ -890,6 +947,19 @@ async function saveSettings(section) {
       poll_interval: raw.poll_interval,
       watch_areas:   _raSelectedAreas,
     };
+  } else if (section === 'homeassistant') {
+    const raw = _origCollect(body);
+    const srv = body._haServer?.();
+    const toggles = [...body.querySelectorAll('[data-hadev]')];
+    data = {
+      ..._configs.homeassistant,
+      token: raw.token,
+      display_switch: raw.display_switch || null,
+      // Device list not loaded (HA offline): keep the saved choice
+      hidden_devices: toggles.length ? toggles.filter(t => !t.checked).map(t => t.dataset.hadev)
+                                     : (_configs.homeassistant?.hidden_devices || []),
+    };
+    if (srv) data.url = `http://${srv.host}:${srv.port}`;
   } else {
     data = { ..._configs[section], ..._origCollect(body) };
   }
@@ -913,6 +983,75 @@ async function saveSettings(section) {
 }
 
 let _raSelectedAreas = [];
+
+// ── Home Assistant (setup only: devices are controlled on the mirror) ─────────
+function renderHASettings(body, cfg) {
+  const cur = /^https?:\/\/([^/:]+)(?::(\d+))?/.exec(cfg.url || '');
+  let server = cur ? { host: cur[1], port: cur[2] || '8123' } : null;
+  const saved = server ? [{ ...server, name: 'Current server' }] : [];
+  const muted = t => `<div class="row"><div class="row-body"><div class="row-label" style="color:var(--label3)">${esc(t)}</div></div></div>`;
+  body.innerHTML = `
+    <div class="sec-header" style="margin-top:4px">Status</div>
+    <div class="card"><div class="row"><div class="row-body"><div class="row-label" id="ha-st">Checking…</div></div></div></div>
+    <div class="sec-header">Server</div>
+    <div class="card" id="ha-servers">${muted('Scanning the network…')}</div>
+    <div class="sec-footer">Found on your network automatically. Tap one to use it.</div>
+    <div class="sec-header">Access</div>
+    <div class="card">${buildRow('Token', textField('token', cfg.token, 'Long-lived access token', 'password'))}</div>
+    <div class="sec-footer">Home Assistant → Profile → Security → Long-lived access tokens</div>
+    <div class="sec-header">Mirror power</div>
+    <div class="card">${buildRow('Display device', `<select class="row-input" data-field="display_switch" id="ha-display">
+      <option value="">None</option>${cfg.display_switch ? `<option value="${esc(cfg.display_switch)}" selected>${esc(cfg.display_switch)}</option>` : ''}</select>`)}</div>
+    <div class="sec-footer">Powers the mirror's screen: the sleep button switches it off. On the mirror its tile needs a long press to turn off.</div>
+    <div class="sec-header">Devices in the Home card</div>
+    <div class="card" id="ha-devs">${muted('Loading…')}</div>
+    <div class="sec-footer">To put one device anywhere on the mirror: Layout → + Device tile.</div>`;
+  body._haServer = () => server;
+
+  const drawServers = list => {
+    body.querySelector('#ha-servers').innerHTML = list.length ? list.map(f => `
+      <div class="row tap" data-host="${esc(f.host)}" data-port="${esc(f.port)}">
+        <div class="row-body"><div class="row-label">${esc(f.name)}</div><div class="row-sublabel">${esc(f.host)}:${esc(f.port)}</div></div>
+        ${server && server.host === f.host ? '<div class="row-value" style="color:var(--blue)">✓</div>' : ''}
+      </div>`).join('') : muted('No Home Assistant found on this network');
+    body.querySelectorAll('#ha-servers [data-host]').forEach(r => r.onclick = () => {
+      server = { host: r.dataset.host, port: r.dataset.port };
+      drawServers(list);
+    });
+  };
+  drawServers(saved);
+  fetch('/api/homeassistant/scan', { method: 'POST' }).then(r => r.ok ? r.json() : []).then(found => {
+    const list = [...found, ...saved.filter(s => !found.some(f => f.host === s.host))];
+    if (!server && found.length === 1) server = { host: found[0].host, port: String(found[0].port) };
+    drawServers(list);
+  }).catch(() => drawServers(saved));
+
+  const STATUS = {
+    ok: s => `Connected to ${s.name || 'Home Assistant'}${s.version ? ` (${s.version})` : ''}`,
+    unauthorized: () => 'Server found, but the token was rejected',
+    unconfigured: () => 'Not set up: pick a server, paste a token, Save',
+  };
+  fetch('/api/homeassistant/status').then(r => r.json()).then(s => {
+    body.querySelector('#ha-st').textContent = (STATUS[s.state] || (() => `Can't reach Home Assistant${s.detail ? ` (${s.detail})` : ''}`))(s);
+  }).catch(() => { body.querySelector('#ha-st').textContent = 'Mirror server not responding'; });
+
+  fetch('/api/homeassistant/entities').then(r => r.ok ? r.json() : []).then(ents => {
+    if (!ents.length) return;
+    body.querySelector('#ha-display').innerHTML = '<option value="">None</option>' + ents.map(e =>
+      `<option value="${esc(e.entity_id)}"${e.entity_id === cfg.display_switch ? ' selected' : ''}>${esc(e.name)}</option>`).join('');
+  }).catch(() => {});
+
+  loadHADevices().then(d => {
+    const hidden = new Set(cfg.hidden_devices || []);
+    const areas = [...new Set(d.devices.map(x => x.area))];
+    body.querySelector('#ha-devs').innerHTML = d.devices.length ? areas.map(a => `
+      <div class="row"><div class="row-body"><div class="row-sublabel" style="font-weight:600">${esc(a)}</div></div></div>
+      ${d.devices.filter(x => x.area === a).map(x => buildRow(x.name,
+        `<label class="ios-toggle"><input type="checkbox" data-hadev="${esc(x.id)}"${hidden.has(x.id) ? '' : ' checked'}><span class="ios-toggle-track"></span></label>`,
+        esc(x.entity))).join('')}`).join('')
+      : muted('Available once Home Assistant is connected');
+  });
+}
 
 function renderRedalertSettings(body, cfg) {
   _raSelectedAreas = [...(cfg.watch_areas || cfg.watched_areas || [])];
@@ -1188,7 +1327,7 @@ fetch('/api/config/layout')
   .catch(() => {});
 
 // Preload settings configs for summary values
-['weather','calendar','news','hue','redalert'].forEach(s => {
+['weather','calendar','news','hue','redalert','homeassistant'].forEach(s => {
   fetch(`/api/config/${s}`).then(r => r.ok ? r.json() : null).then(d => {
     if (d) { _configs[s] = d; updateSettingsSummaries(); }
   }).catch(() => {});

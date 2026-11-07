@@ -87,7 +87,7 @@ class HomeAssistantService:
     def __init__(self):
         self._display_on = None   # last known state of the display device (None = unknown)
         self._hold_until = 0.0    # ignore state right after we switched it (HA state lags the command)
-        self._devices = []        # [{id, entity, name, area, extras: [entity_id]}]
+        self._devices = []        # [{id, entity, name, area, extras: [[entity_id, label]]}]
         self._states = {}         # entity_id → trimmed state, for known entities only
         self._pictures = {}       # media_player entity_id → raw entity_picture path
         self._art = {}            # entity_id → (pic key, bytes, content type)
@@ -101,9 +101,9 @@ class HomeAssistantService:
     def get_ha_state(self):
         if not self._devices:
             return None
-        hidden = set(self.config.get("hidden_devices") or [])
-        return {"devices": self._devices, "states": self._states, "hidden": sorted(hidden),
-                "connected": self._connected}
+        cfg = self.config
+        return {"devices": self._devices, "states": self._states, "hidden": cfg.get("hidden_devices") or [],
+                "display": cfg.get("display_switch"), "connected": self._connected}
 
     @property
     def known_entities(self) -> set:
@@ -199,13 +199,16 @@ class HomeAssistantService:
             area_id = main.get("area_id") or dev.get("area_id")
             name = (states[main["entity_id"]]["attributes"].get("friendly_name")
                     or dev.get("name_by_user") or dev.get("name") or main["entity_id"])
-            extras = [e["entity_id"] for e in ents if e is not main]
+            def label(e):  # "סלון Horizontal swing" → "Horizontal swing"
+                n = states[e["entity_id"]]["attributes"].get("friendly_name") or e["entity_id"]
+                return n[len(name):].strip() if n.startswith(name) and len(n) > len(name) else n
+            extras = [[e["entity_id"], label(e)] for e in ents if e is not main]
             out.append({"id": key, "entity": main["entity_id"], "name": name,
                         "area": areas.get(area_id, "Other"), "extras": extras})
         out.sort(key=lambda d: (d["area"] == "Other", d["area"].lower(), d["name"].lower()))
 
         self._devices = out
-        wanted = {d["entity"] for d in out} | {x for d in out for x in d["extras"]}
+        wanted = {d["entity"] for d in out} | {x[0] for d in out for x in d["extras"]}
         self._states = {eid: trim(states[eid]) for eid in wanted}
         self._pictures = {eid: states[eid]["attributes"].get("entity_picture")
                           for eid in wanted if eid.startswith("media_player.")}

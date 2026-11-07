@@ -110,7 +110,8 @@
         manifests = manifests.filter(m => !m.settingsOnly);  // integrations have no mirror UI
         window.widgetManifests = {};
         manifests.forEach(m => { window.widgetManifests[m.name] = m; });
-        window.activeWidgets = manifests.map(m => m.name);
+        // "multi" widgets (e.g. ha_tile) have no single container: app.js makes one per layout key
+        window.activeWidgets = manifests.filter(m => !m.multi).map(m => m.name);
 
         const mirror = document.getElementById('mirror');
 
@@ -125,11 +126,13 @@
           const w = m.name;
           const base = m.basePath || w;
 
-          let div = document.createElement('div');
-          div.id = `widget-${w}`;
-          div.className = 'widget';
-          Object.entries(m.containerAttrs || {}).forEach(([k, v]) => div.setAttribute(k, v));
-          mirror.appendChild(div);
+          if (!m.multi) {
+            let div = document.createElement('div');
+            div.id = `widget-${w}`;
+            div.className = 'widget';
+            Object.entries(m.containerAttrs || {}).forEach(([k, v]) => div.setAttribute(k, v));
+            mirror.appendChild(div);
+          }
 
           let link = document.createElement('link');
           link.rel = 'stylesheet';

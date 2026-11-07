@@ -151,7 +151,7 @@ async function loadAll() {
 
   // Merge manifest labels into WIDGET_META for the layout editor
   manifests.forEach(m => {
-    if (!WIDGET_META[m.name] && !m.settingsOnly) {
+    if (!WIDGET_META[m.name] && !m.settingsOnly && !m.multi) {  // multi: placed per device from the phone
       WIDGET_META[m.name] = { label: m.label || m.name, color: '#2a2a2a' };
     }
   });
@@ -595,7 +595,7 @@ function _rebuildGrid() {
   // Widget boxes
   for (const [key, pos] of Object.entries(tpl.widgets || {})) {
     if (_isHidden(pos)) continue;
-    const m = WIDGET_META[key] || { label: key, color: '#333' };
+    const m = WIDGET_META[key] || { label: key.startsWith('ha_tile:') ? key.slice(8) : key, color: '#333' };
     const { s: cs, e: ce } = _parseSpan(pos.column);
     const { s: rs, e: re } = _parseSpan(pos.row);
     html += `<div class="gw-box" data-key="${key}"
@@ -661,7 +661,7 @@ function _bindDragResize(grid, CELL_W, CELL_H) {
         box.style.left = Math.max(0, Math.min(maxL - origW, origL + dx)) + 'px';
         box.style.top  = Math.max(0, Math.min(maxT - origH, origT + dy)) + 'px';
       } else {
-        box.style.width  = Math.max(4 * CELL_W, Math.min(maxL - origL, origW + dx)) + 'px';
+        box.style.width  = Math.max(1 * CELL_W, Math.min(maxL - origL, origW + dx)) + 'px';
         box.style.height = Math.max(1 * CELL_H, Math.min(maxT - origT, origH + dy)) + 'px';
       }
     });
@@ -672,7 +672,7 @@ function _bindDragResize(grid, CELL_W, CELL_H) {
       // Snap to grid
       const cs = Math.max(1, Math.round(box.offsetLeft / CELL_W) + 1);
       const rs = Math.max(1, Math.round(box.offsetTop  / CELL_H) + 1);
-      const ce = Math.min(GRID_COLS + 1, Math.max(cs + 4, Math.round((box.offsetLeft + box.offsetWidth)  / CELL_W) + 1));
+      const ce = Math.min(GRID_COLS + 1, Math.max(cs + 1, Math.round((box.offsetLeft + box.offsetWidth)  / CELL_W) + 1));
       const re = Math.min(GRID_ROWS + 1, Math.max(rs + 1, Math.round((box.offsetTop  + box.offsetHeight) / CELL_H) + 1));
       box.style.left   = (cs-1)*CELL_W + 'px'; box.style.top    = (rs-1)*CELL_H + 'px';
       box.style.width  = (ce-cs)*CELL_W + 'px'; box.style.height = (re-rs)*CELL_H + 'px';

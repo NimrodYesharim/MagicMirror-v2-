@@ -704,7 +704,12 @@ async def save_config(widget: str, request: Request):
     # Notify widget of config change
     if widget in request.app.state.widgets:
         svc = request.app.state.widgets[widget]
-        if widget == 'hue':
+        if widget == 'homeassistant':
+            # Hidden devices / display switch changed: the mirror redraws its Home card now
+            state = svc.get_ha_state()
+            if state:
+                await ws_manager.broadcast({"type": "ha_state", "data": state})
+        elif widget == 'hue':
             await svc._discover()
             state = svc.get_cached_state()
             if state:

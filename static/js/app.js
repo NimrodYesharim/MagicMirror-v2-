@@ -52,7 +52,7 @@ async function _tryFetchJson(url) {
   const restNeeded = [];
   for (const w of window.activeWidgets) {
     if (prefetchedData[w] && widgets[w]) widgets[w]._pendingData = prefetchedData[w];
-    else if (w !== 'datetime') restNeeded.push(w);
+    else if (w !== 'datetime' && window.widgetManifests?.[w]?.wsType !== null) restNeeded.push(w);
   }
   if (display) applyDisplay(display);
   if (layout)  applyLayout(layout);
@@ -94,7 +94,38 @@ function applyLayout(layout) {
   _currentIdx = _templateKeys.indexOf(savedCurrent);
   if (_currentIdx < 0) _currentIdx = 0;
 
+  _syncInstances();
   _applyTemplate(_currentIdx);
+}
+
+// Widgets placed more than once ("multi" manifest): layout key `base:arg`, e.g. `ha_tile:climate.slvn`.
+// One container + instance per key used in any template; ones no template uses are removed.
+function _syncInstances() {
+  const keys = new Set();
+  for (const t of Object.values(_layoutTemplates)) {
+    for (const k of Object.keys(t?.widgets || {})) if (k.includes(':')) keys.add(k);
+  }
+  const mirror = document.getElementById('mirror');
+  for (const key of keys) {
+    if (widgets[key]) continue;
+    const i = key.indexOf(':'), base = key.slice(0, i), arg = key.slice(i + 1);
+    const m = window.widgetManifests?.[base], Cls = window.WidgetClasses[base];
+    if (!m?.multi || !Cls) continue;
+    const div = document.createElement('div');
+    div.id = `widget-${key}`;
+    div.className = 'widget';
+    Object.entries(m.containerAttrs || {}).forEach(([k, v]) => div.setAttribute(k, v));
+    mirror.appendChild(div);
+    widgets[key] = new Cls(div.id, arg);
+    window.activeWidgets.push(key);
+    _scaleRo?.observe(div);
+  }
+  for (const key of window.activeWidgets.filter(k => k.includes(':') && !keys.has(k))) {
+    widgets[key]?.destroy?.();
+    delete widgets[key];
+    document.getElementById(`widget-${key}`)?.remove();
+    window.activeWidgets.splice(window.activeWidgets.indexOf(key), 1);
+  }
 }
 
 function _applyTemplate(idx) {
@@ -119,6 +150,10 @@ function _applyTemplate(idx) {
     // 1/1 = "hidden in this layout": display:none so it costs no layout, paint or animation
     el.style.display = (pos.row === '1 / 1') ? 'none' : '';
   }
+  // Opt-in widgets (placed tiles, the Home button) show only in templates that place them
+  for (const w of window.activeWidgets) {
+    if (_optIn(w) && !template.widgets?.[w]) document.getElementById(`widget-${w}`).style.display = 'none';
+  }
 
   // Scale after positions are set, so --wu matches the new cells in the same frame
   initWidgetScale();
@@ -138,11 +173,16 @@ function _flushPending() {
   }
 }
 
+// Not shown unless a template places it: `base:arg` instances and manifests with "optIn"
+function _optIn(name) {
+  return name.includes(':') || !!window.widgetManifests?.[name]?.optIn;
+}
+
 // Phase 4d: Check if a widget is hidden in the current layout template
 function _isWidgetHidden(name) {
   const key = _templateKeys[_currentIdx];
   const template = _layoutTemplates[key];
-  if (!template?.widgets?.[name]) return false;
+  if (!template?.widgets?.[name]) return _optIn(name);
   return template.widgets[name].row === '1 / 1';
 }
 
@@ -308,7 +348,7 @@ function applySleep(on) {
   sleepOverlay.classList.toggle('hidden', !on);
   btnSleep.classList.toggle('active', on);
   // Waking: draw the latest data now, while the display spends ~3 s powering up
-  if (!on) _flushPending();
+  if (!on) { _flushPending(); window.HA?.wake(); }
 }
 
 // Display switched from Home Assistant (automation, app): follow it; a tap on the overlay wakes it
@@ -395,7 +435,9 @@ const WIDGET_REFS = {
   weather:  { cols: 6, rows: 9 },
   calendar: { cols: 6, rows: 9 },
   hue:      { cols: 7, rows: 8 },
-  hue_scenes: { cols: 1.5, rows: 8 }
+  hue_scenes: { cols: 1.5, rows: 8 },
+  ha_home:  { cols: 2, rows: 2 },
+  ha_tile:  { cols: 3, rows: 2 },   // per placed device: `ha_tile:<entity>` uses this base ref
 };
 
 let _scaleRafId = null;
@@ -427,7 +469,7 @@ function applyAllScales() {
   _setWu(document.documentElement, globalWu);
 
   sizes.forEach(([w, widgetEl, W_cur, H_cur]) => {
-    const ref = WIDGET_REFS[w];
+    const ref = WIDGET_REFS[w] || WIDGET_REFS[w.split(':')[0]];
     if (ref) {
       const W_ref = ref.cols * colWidth;
       const H_ref = ref.rows * rowHeight;
